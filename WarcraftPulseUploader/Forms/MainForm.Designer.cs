@@ -115,21 +115,26 @@ partial class MainForm
         pnlOnboard.Controls.AddRange(new System.Windows.Forms.Control[] { lblOnboard, btnOnboard });
 
         // ── History ListView ─────────────────────────────────────────────
-        lvHistory.BackColor     = bgDark;
-        lvHistory.ForeColor     = clrPrimary;
-        lvHistory.Location      = new System.Drawing.Point(0, 52);
-        lvHistory.Size          = new System.Drawing.Size(440, 410);
-        lvHistory.View          = System.Windows.Forms.View.Details;
-        lvHistory.FullRowSelect = true;
-        lvHistory.GridLines     = false;
-        lvHistory.MultiSelect   = false;
-        lvHistory.BorderStyle   = System.Windows.Forms.BorderStyle.None;
-        lvHistory.HeaderStyle   = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
-        lvHistory.OwnerDraw     = true;
-        lvHistory.Columns.Add("Log File", 200);
-        lvHistory.Columns.Add("Zone",     120);
-        lvHistory.Columns.Add("Badge",     64);
-        lvHistory.Columns.Add("Date",      56);
+        // Force taller rows via a 1×24 SmallImageList
+        var lvImageList = new System.Windows.Forms.ImageList { ImageSize = new System.Drawing.Size(1, 24) };
+        lvImageList.Images.Add(new System.Drawing.Bitmap(1, 24));
+
+        lvHistory.BackColor      = bgDark;
+        lvHistory.ForeColor      = clrPrimary;
+        lvHistory.Location       = new System.Drawing.Point(0, 52);
+        lvHistory.Size           = new System.Drawing.Size(440, 410);
+        lvHistory.View           = System.Windows.Forms.View.Details;
+        lvHistory.FullRowSelect  = true;
+        lvHistory.GridLines      = false;
+        lvHistory.MultiSelect    = false;
+        lvHistory.BorderStyle    = System.Windows.Forms.BorderStyle.None;
+        lvHistory.HeaderStyle    = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
+        lvHistory.OwnerDraw      = true;
+        lvHistory.SmallImageList = lvImageList;
+        lvHistory.Columns.Add("Log File", 220);
+        lvHistory.Columns.Add("Size",      90);
+        lvHistory.Columns.Add("Badge",     68);
+        lvHistory.Columns.Add("Date",      62);
         lvHistory.DrawColumnHeader += lvHistory_DrawColumnHeader;
         lvHistory.DrawItem         += lvHistory_DrawItem;
         lvHistory.DrawSubItem      += lvHistory_DrawSubItem;

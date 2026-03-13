@@ -17,4 +17,12 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.5" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\logo.ico" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <ApplicationIcon>Resources\logo.ico</ApplicationIcon>
+  </PropertyGroup>
+
 </Project>

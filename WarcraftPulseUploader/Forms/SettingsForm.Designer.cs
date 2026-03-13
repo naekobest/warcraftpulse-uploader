@@ -151,6 +151,8 @@ partial class SettingsForm
         chkAutoUpload.Text      = "Upload automatically";
         chkAutoUpload.ForeColor = clrPrimary;
         chkAutoUpload.BackColor = bgWindow;
+        chkAutoUpload.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        chkAutoUpload.FlatAppearance.BorderColor = clrMuted;
         chkAutoUpload.Location  = new System.Drawing.Point(x, y);
         chkAutoUpload.Size      = new System.Drawing.Size(w, 22);
         chkAutoUpload.Checked   = true;
@@ -159,6 +161,8 @@ partial class SettingsForm
         chkMinimizeToTray.Text      = "Minimize to tray on close";
         chkMinimizeToTray.ForeColor = clrPrimary;
         chkMinimizeToTray.BackColor = bgWindow;
+        chkMinimizeToTray.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        chkMinimizeToTray.FlatAppearance.BorderColor = clrMuted;
         chkMinimizeToTray.Location  = new System.Drawing.Point(x, y);
         chkMinimizeToTray.Size      = new System.Drawing.Size(w, 22);
         chkMinimizeToTray.Checked   = true;
@@ -167,6 +171,8 @@ partial class SettingsForm
         chkStartWithWindows.Text      = "Start with Windows";
         chkStartWithWindows.ForeColor = clrPrimary;
         chkStartWithWindows.BackColor = bgWindow;
+        chkStartWithWindows.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
+        chkStartWithWindows.FlatAppearance.BorderColor = clrMuted;
         chkStartWithWindows.Location  = new System.Drawing.Point(x, y);
         chkStartWithWindows.Size      = new System.Drawing.Size(w, 22);
         chkStartWithWindows.Checked   = true;

@@ -1,6 +1,7 @@
 // Services/UploadService.cs
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using WarcraftPulseUploader.Parser;
 
@@ -23,6 +24,9 @@ public sealed class UploadService : IDisposable
         string apiToken,
         CancellationToken ct = default)
     {
+        var payloadJson = JsonSerializer.Serialize(data);
+        int payloadKb   = Encoding.UTF8.GetByteCount(payloadJson) / 1024;
+
         int[] backoffMs = [0, 1000, 2000];
         Exception? lastEx = null;
         HttpResponseMessage? response = null;
@@ -35,7 +39,7 @@ public sealed class UploadService : IDisposable
             // HttpRequestMessage cannot be reused after SendAsync — re-create on each attempt
             using var request = new HttpRequestMessage(HttpMethod.Post, "api/reports/upload-parsed");
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiToken);
-            request.Content = JsonContent.Create(data);
+            request.Content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
 
             try
             {
@@ -63,7 +67,8 @@ public sealed class UploadService : IDisposable
 
                 return UploadResult.Ok(
                     codeEl.GetString() ?? "",
-                    urlEl.GetString()  ?? ""
+                    urlEl.GetString()  ?? "",
+                    payloadKb
                 );
             }
             catch (JsonException)
@@ -104,9 +109,10 @@ public sealed class UploadResult
     public string? ReportCode { get; private init; }
     public string? StatusUrl  { get; private init; }
     public string? Error      { get; private init; }
+    public int     PayloadKb  { get; private init; }
 
-    public static UploadResult Ok(string reportCode, string statusUrl) =>
-        new() { Success = true, ReportCode = reportCode, StatusUrl = statusUrl };
+    public static UploadResult Ok(string reportCode, string statusUrl, int payloadKb) =>
+        new() { Success = true, ReportCode = reportCode, StatusUrl = statusUrl, PayloadKb = payloadKb };
 
     public static UploadResult Fail(string error) =>
         new() { Success = false, Error = error };

@@ -13,6 +13,7 @@ public sealed class UploadEntry
     public int    KillCount   { get; set; }
     public string ReportCode  { get; set; } = "";
     public string StatusUrl   { get; set; } = "";
+    public int    PayloadKb   { get; set; }
     public DateTime UploadedAt { get; set; }
 }
 

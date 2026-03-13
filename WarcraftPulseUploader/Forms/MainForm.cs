@@ -35,10 +35,13 @@ public partial class MainForm : Form
     {
         InitializeComponent();
 
+        var appIcon = LoadAppIcon();
+        if (appIcon is not null) Icon = appIcon;
+
         _trayIcon = new NotifyIcon
         {
             Text             = "WarcraftPulse Uploader",
-            Icon             = SystemIcons.Application,
+            Icon             = appIcon ?? SystemIcons.Application,
             Visible          = true,
             ContextMenuStrip = BuildTrayMenu(),
         };
@@ -86,6 +89,17 @@ public partial class MainForm : Form
 
         if (_settings.StartWithWindows)
             SettingsForm.ApplyStartWithWindows(true);
+    }
+
+    private static System.Drawing.Icon? LoadAppIcon()
+    {
+        try
+        {
+            var asm    = System.Reflection.Assembly.GetExecutingAssembly();
+            var stream = asm.GetManifestResourceStream("WarcraftPulseUploader.Resources.logo.ico");
+            return stream is null ? null : new System.Drawing.Icon(stream);
+        }
+        catch { return null; }
     }
 
     private static void WireHover(Button btn, System.Drawing.Color normal, System.Drawing.Color hover)
@@ -263,6 +277,7 @@ public partial class MainForm : Form
                     KillCount  = kills,
                     ReportCode = result.ReportCode!,
                     StatusUrl  = result.StatusUrl!,
+                    PayloadKb  = result.PayloadKb,
                     UploadedAt = DateTime.UtcNow,
                 });
                 RefreshHistory();
@@ -407,10 +422,11 @@ public partial class MainForm : Form
 
         foreach (var entry in _history.Entries)
         {
+            string sizeLabel = entry.PayloadKb > 0 ? $"{entry.PayloadKb} KB" : entry.ZoneName;
             var item = new ListViewItem(entry.FileName);
-            item.SubItems.Add(entry.ZoneName);
+            item.SubItems.Add(sizeLabel);
             item.SubItems.Add("Uploaded");
-            item.SubItems.Add(entry.UploadedAt.ToLocalTime().ToString("MM/dd HH:mm"));
+            item.SubItems.Add(entry.UploadedAt.ToLocalTime().ToString("MM/dd"));
             item.Tag = entry.StatusUrl;
             lvHistory.Items.Add(item);
         }
@@ -446,8 +462,8 @@ public partial class MainForm : Form
 
     private void lvHistory_DrawSubItem(object? sender, DrawListViewSubItemEventArgs e)
     {
-        bool isSelected    = e.Item.Selected;
-        bool isPlaceholder = e.Item.Tag is null;
+        bool isSelected    = e.Item?.Selected ?? false;
+        bool isPlaceholder = e.Item?.Tag is null;
 
         var bg = isSelected
             ? ClrSelect
