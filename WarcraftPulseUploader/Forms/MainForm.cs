@@ -111,7 +111,17 @@ public partial class MainForm : Form
 
         btnUpload.Enabled = false;
 
-        string fileHash = await Task.Run(() => UploadHistory.HashFile(filePath), ct);
+        string fileHash;
+        try
+        {
+            fileHash = await Task.Run(() => UploadHistory.HashFile(filePath), ct);
+        }
+        catch (IOException ex)
+        {
+            SetStatus($"Error reading log file: {ex.Message}");
+            btnUpload.Enabled = true;
+            return;
+        }
 
         if (_history.IsDuplicate(fileHash))
         {
