@@ -18,6 +18,7 @@ partial class MainForm
 
         lblStatus        = new Label();
         lblTokenWarning  = new Label();
+        lvHistory        = new ListView();
         btnUpload        = new Button();
         btnOpenReport    = new Button();
         btnSettings      = new Button();
@@ -43,6 +44,20 @@ partial class MainForm
         lblTokenWarning.Size      = new System.Drawing.Size(416, 22);
         lblTokenWarning.Visible   = false;
 
+        // History list
+        lvHistory.Location      = new System.Drawing.Point(12, 70);
+        lvHistory.Size          = new System.Drawing.Size(416, 350);
+        lvHistory.View          = View.Details;
+        lvHistory.FullRowSelect = true;
+        lvHistory.GridLines     = true;
+        lvHistory.MultiSelect   = false;
+        lvHistory.Columns.Add("Date",       80);
+        lvHistory.Columns.Add("Zone",       140);
+        lvHistory.Columns.Add("Encounters", 80);
+        lvHistory.Columns.Add("Kills",      50);
+        lvHistory.Columns.Add("Report",     120);
+        lvHistory.DoubleClick  += lvHistory_DoubleClick;
+
         // Upload button
         btnUpload.Text     = "Upload Log File…";
         btnUpload.Location = new System.Drawing.Point(12, 440);
@@ -64,6 +79,7 @@ partial class MainForm
 
         Controls.AddRange(new Control[] {
             lblStatus, lblTokenWarning,
+            lvHistory,
             btnUpload, btnOpenReport, btnSettings,
         });
 
@@ -71,9 +87,10 @@ partial class MainForm
     }
 
     // Control fields
-    private Label  lblStatus       = null!;
-    private Label  lblTokenWarning = null!;
-    private Button btnUpload        = null!;
-    private Button btnOpenReport    = null!;
-    private Button btnSettings      = null!;
+    private Label    lblStatus       = null!;
+    private Label    lblTokenWarning = null!;
+    private ListView lvHistory       = null!;
+    private Button   btnUpload       = null!;
+    private Button   btnOpenReport   = null!;
+    private Button   btnSettings     = null!;
 }

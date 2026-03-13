@@ -7,6 +7,7 @@ namespace WarcraftPulseUploader.Forms;
 public partial class MainForm : Form
 {
     private AppSettings    _settings = AppSettings.Load();
+    private UploadHistory  _history  = UploadHistory.Load();
     private LogWatcher?    _watcher;
     private UploadService? _uploader;
     private CancellationTokenSource? _cts;
@@ -37,6 +38,7 @@ public partial class MainForm : Form
         base.OnLoad(e);
         StartWatcher();
         UpdateTokenWarning();
+        RefreshHistory();
 
         // Sync registry state with current setting (handles setting changed outside the app)
         if (_settings.StartWithWindows)
@@ -109,6 +111,19 @@ public partial class MainForm : Form
 
         btnUpload.Enabled = false;
 
+        string fileHash = await Task.Run(() => UploadHistory.HashFile(filePath), ct);
+
+        if (_history.IsDuplicate(fileHash))
+        {
+            var proceed = MessageBox.Show(
+                "This log file was already uploaded.\n\nUpload again?",
+                "Duplicate Log",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+            if (proceed != DialogResult.Yes) { SetStatus("Skipped — already uploaded."); btnUpload.Enabled = true; return; }
+        }
+
         try
         {
             if (fromWatcher)
@@ -156,6 +171,19 @@ public partial class MainForm : Form
                 SetStatus($"Done · {data.ZoneName} · {data.Fights.Count} encounter(s), {kills} kill(s)");
                 btnOpenReport.Tag     = result.StatusUrl;
                 btnOpenReport.Visible = true;
+
+                _history.Add(new UploadEntry
+                {
+                    FileName   = Path.GetFileName(filePath),
+                    FileHash   = fileHash,
+                    ZoneName   = data.ZoneName,
+                    FightCount = data.Fights.Count,
+                    KillCount  = data.Fights.Count(f => f.Kill),
+                    ReportCode = result.ReportCode!,
+                    StatusUrl  = result.StatusUrl!,
+                    UploadedAt = DateTime.UtcNow,
+                });
+                RefreshHistory();
             }
             else
             {
@@ -245,6 +273,31 @@ public partial class MainForm : Form
     {
         if (InvokeRequired) { Invoke(() => SetStatus(message)); return; }
         lblStatus.Text = message;
+    }
+
+    private void RefreshHistory()
+    {
+        lvHistory.Items.Clear();
+        foreach (var e in _history.Entries)
+        {
+            var item = new ListViewItem(e.UploadedAt.ToLocalTime().ToString("MM/dd HH:mm"));
+            item.SubItems.Add(e.ZoneName);
+            item.SubItems.Add(e.FightCount.ToString());
+            item.SubItems.Add(e.KillCount.ToString());
+            item.SubItems.Add(e.ReportCode);
+            item.Tag = e.StatusUrl;
+            lvHistory.Items.Add(item);
+        }
+    }
+
+    private void lvHistory_DoubleClick(object sender, EventArgs e)
+    {
+        if (lvHistory.SelectedItems.Count == 0) return;
+        if (lvHistory.SelectedItems[0].Tag is string url && !string.IsNullOrEmpty(url))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
+            {
+                UseShellExecute = true,
+            });
     }
 
     private void UpdateTokenWarning()
