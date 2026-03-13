@@ -1,12 +1,14 @@
 // Forms/MainForm.cs
+using WarcraftPulseUploader.Parser;
 using WarcraftPulseUploader.Services;
 
 namespace WarcraftPulseUploader.Forms;
 
 public partial class MainForm : Form
 {
-    private AppSettings _settings = AppSettings.Load();
-    private LogWatcher? _watcher;
+    private AppSettings    _settings = AppSettings.Load();
+    private LogWatcher?    _watcher;
+    private UploadService? _uploader;
     private CancellationTokenSource? _cts;
 
     public MainForm()
@@ -27,22 +29,13 @@ public partial class MainForm : Form
         UpdateTokenWarning();
     }
 
-    private void btnSettings_Click(object sender, EventArgs e)
-    {
-        using var form = new SettingsForm(_settings);
-        if (form.ShowDialog() == DialogResult.OK)
-        {
-            UpdateTokenWarning();
-            StartWatcher();
-        }
-    }
-
     private void StartWatcher()
     {
         _watcher?.Dispose();
         if (string.IsNullOrEmpty(_settings.WowLogDirectory)) return;
 
-        _watcher = new LogWatcher(_settings.WowLogDirectory);
+        _uploader = new UploadService(_settings.ServerUrl);
+        _watcher  = new LogWatcher(_settings.WowLogDirectory);
         _watcher.NewLogDetected += OnNewLogDetected;
         _watcher.Start();
 
@@ -80,12 +73,83 @@ public partial class MainForm : Form
             }
 
             SetStatus($"Parsing: {Path.GetFileName(filePath)}…");
-            // Parsing and upload wired in Task 10
+
+            CombatLogData data;
+            try
+            {
+                // Run CPU-bound parse off the UI thread
+                data = await Task.Run(() => CombatLogParser.Parse(filePath), ct);
+            }
+            catch (ParseException ex)
+            {
+                SetStatus($"Parse error: {ex.Message}");
+                btnUpload.Enabled = true;
+                return;
+            }
+
+            if (!_settings.AutoUpload)
+            {
+                var confirm = MessageBox.Show(
+                    $"Upload \"{Path.GetFileName(filePath)}\"?\n\n" +
+                    $"Zone: {data.ZoneName}  ·  {data.Fights.Count} encounter(s)",
+                    "WarcraftPulse Uploader",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+                if (confirm != DialogResult.Yes) { SetStatus("Upload cancelled."); btnUpload.Enabled = true; return; }
+            }
+
+            SetStatus("Uploading…");
+
+            var result = await _uploader!.UploadAsync(data, _settings.ApiToken, ct);
+
+            if (result.Success)
+            {
+                int kills = data.Fights.Count(f => f.Kill);
+                SetStatus($"Done · {data.ZoneName} · {data.Fights.Count} encounter(s), {kills} kill(s)");
+                btnOpenReport.Tag     = result.StatusUrl;
+                btnOpenReport.Visible = true;
+            }
+            else
+            {
+                SetStatus($"Error: {result.Error}");
+            }
+
             btnUpload.Enabled = true;
         }
         catch (OperationCanceledException)
         {
             btnUpload.Enabled = true;
+        }
+    }
+
+    private void btnOpenReport_Click(object sender, EventArgs e)
+    {
+        if (btnOpenReport.Tag is string url && !string.IsNullOrEmpty(url))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
+            {
+                UseShellExecute = true,
+            });
+    }
+
+    private void btnUpload_Click(object sender, EventArgs e)
+    {
+        using var dlg = new OpenFileDialog
+        {
+            Title  = "Select WoW Combat Log",
+            Filter = "WoW Combat Log (*.txt)|*.txt|All files (*.*)|*.*",
+        };
+        if (dlg.ShowDialog() == DialogResult.OK)
+            _ = ProcessLogAsync(dlg.FileName);
+    }
+
+    private void btnSettings_Click(object sender, EventArgs e)
+    {
+        using var form = new SettingsForm(_settings);
+        if (form.ShowDialog() == DialogResult.OK)
+        {
+            UpdateTokenWarning();
+            StartWatcher();
         }
     }
 
@@ -127,6 +191,7 @@ public partial class MainForm : Form
         base.OnFormClosed(e);
     }
 
+    // SetStatus is safe to call from any thread.
     private void SetStatus(string message)
     {
         if (InvokeRequired) { Invoke(() => SetStatus(message)); return; }
@@ -137,7 +202,4 @@ public partial class MainForm : Form
     {
         lblTokenWarning.Visible = string.IsNullOrEmpty(_settings.ApiToken);
     }
-
-    private void btnUpload_Click(object sender, EventArgs e) { }
-    private void btnOpenReport_Click(object sender, EventArgs e) { }
 }
