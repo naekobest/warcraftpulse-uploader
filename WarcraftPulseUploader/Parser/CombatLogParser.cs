@@ -78,7 +78,7 @@ public static class CombatLogParser
                     if (fields.Length >= 3)
                     {
                         zoneId   = int.TryParse(fields[1], out int zid) ? zid : zoneId;
-                        zoneName = fields[2].Trim('"');
+                        zoneName = fields[2];
                     }
                     break;
 
@@ -88,7 +88,7 @@ public static class CombatLogParser
                         fightSeq++;
                         openFightId      = fightSeq;
                         openEncounterId  = int.TryParse(fields[1], out int eid) ? eid : 0;
-                        openFightName    = fields[2].Trim('"');
+                        openFightName    = fields[2];
                         openDifficulty   = int.TryParse(fields[3], out int diff) ? diff : 0;
                         openFightStart   = ts;
 
@@ -132,6 +132,12 @@ public static class CombatLogParser
                     {
                         string guid    = fields[1];
                         int    actorId = GetOrAdd(actorMap, guid, ref nextActorId);
+                        if (!playerMeta.ContainsKey(actorId))
+                        {
+                            string pName = fields[2];
+                            var parts = pName.Split('-', 2);
+                            playerMeta[actorId] = new PlayerMeta { Name = parts[0], Realm = parts.Length > 1 ? parts[1] : "" };
+                        }
                         int t1 = fields.Length > 24 ? ParseInt(fields[24]) : 0;
                         int t2 = fields.Length > 25 ? ParseInt(fields[25]) : 0;
                         int t3 = fields.Length > 26 ? ParseInt(fields[26]) : 0;
@@ -186,10 +192,10 @@ public static class CombatLogParser
         if (fields.Length < 9) return;
 
         string srcGuid    = fields[1];
-        string srcName    = fields[2].Trim('"');
+        string srcName    = fields[2];
         uint   srcFlags   = ParseHex(fields[3]);
         string tgtGuid    = fields[5];
-        string tgtName    = fields[6].Trim('"');
+        string tgtName    = fields[6];
         uint   tgtFlags   = ParseHex(fields[7]);
         long   tsMs       = (long)(ts - reportStart).TotalMilliseconds;
 
@@ -237,7 +243,7 @@ public static class CombatLogParser
             {
                 if (fields.Length < 13) break;
                 int    spellId   = ParseInt(fields[9]);
-                string spellName = fields[10].Trim('"');
+                string spellName = fields[10];
                 bool   isBuff    = fields[12].Trim() == "BUFF";
 
                 var store = isBuff ? buffs[fightId] : debuffs[fightId];
@@ -264,7 +270,7 @@ public static class CombatLogParser
                 {
                     int spellId = ParseInt(fields[9]);
                     firstSpell.TryAdd(srcId, spellId);
-                    casts[fightId].Add(new RawEvent { SourceId = srcId, SpellId = spellId, SpellName = fields[10].Trim('"'), Timestamp = tsMs });
+                    casts[fightId].Add(new RawEvent { SourceId = srcId, SpellId = spellId, SpellName = fields[10], Timestamp = tsMs });
                 }
                 break;
 
@@ -403,6 +409,7 @@ public static class CombatLogParser
         {
             if (meta.TryGetValue(actorId, out var m) && m.WowClass is null)
             {
+                // TODO(#403): look up spellId in ported signature spell table, set m.WowClass / m.Role
             }
         }
     }
@@ -450,7 +457,7 @@ public static class CombatLogParser
 
         foreach (char c in line)
         {
-            if (c == '"') { inQuote = !inQuote; cur.Append(c); }
+            if (c == '"') { inQuote = !inQuote; }
             else if (c == ',' && !inQuote) { fields.Add(cur.ToString()); cur.Clear(); }
             else cur.Append(c);
         }
@@ -458,11 +465,18 @@ public static class CombatLogParser
         return [.. fields];
     }
 
-    private static uint ParseHex(string s) => uint.TryParse(s.Replace("0x", ""), System.Globalization.NumberStyles.HexNumber, null, out uint v) ? v : 0;
+    private static uint ParseHex(string s)
+    {
+        ReadOnlySpan<char> span = s.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+            ? s.AsSpan(2)
+            : s.AsSpan();
+        return uint.TryParse(span, System.Globalization.NumberStyles.HexNumber, null, out uint v) ? v : 0;
+    }
     private static int  ParseInt(string s) => int.TryParse(s, out int v) ? v : 0;
     private static long ParseLong(string s) => long.TryParse(s, out long v) ? v : 0;
 }
 
+/// <summary>In-memory player metadata accumulated while parsing; not serialized.</summary>
 internal sealed class PlayerMeta
 {
     public string  Name     { get; set; } = "";
