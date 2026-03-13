@@ -40,7 +40,12 @@ public sealed class UploadHistory
             var json = File.ReadAllText(HistoryPath);
             h._entries = JsonSerializer.Deserialize<List<UploadEntry>>(json) ?? [];
         }
-        catch (Exception) { /* corrupt history — start fresh */ }
+        catch (JsonException ex)
+        {
+            // Corrupt history — start fresh.
+            System.Diagnostics.Debug.WriteLine($"[UploadHistory] History corrupt, resetting: {ex.Message}");
+        }
+        // IOException propagates to caller
         return h;
     }
 

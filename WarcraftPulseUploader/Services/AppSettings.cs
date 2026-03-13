@@ -1,4 +1,5 @@
 // Services/AppSettings.cs
+using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace WarcraftPulseUploader.Services;
@@ -36,7 +37,18 @@ public sealed class AppSettings
                         null,
                         System.Security.Cryptography.DataProtectionScope.CurrentUser));
             }
-            catch (Exception) { ApiToken = ""; }  // encrypted by different user or corrupted — reset
+            catch (FormatException ex)
+            {
+                // Token Base64 corrupt.
+                System.Diagnostics.Debug.WriteLine($"[AppSettings] Token Base64 corrupt: {ex.Message}");
+                ApiToken = "";
+            }
+            catch (CryptographicException ex)
+            {
+                // Token encrypted by different Windows user or data corrupt.
+                System.Diagnostics.Debug.WriteLine($"[AppSettings] DPAPI decrypt failed: {ex.Message}");
+                ApiToken = "";
+            }
         }
     }
 
@@ -60,10 +72,12 @@ public sealed class AppSettings
                 var json = File.ReadAllText(SettingsPath);
                 settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
             }
-            catch (Exception)
+            catch (JsonException ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[AppSettings] Settings corrupt, resetting: {ex.Message}");
                 settings = new AppSettings();
             }
+            // IOException propagates to caller
         }
 
         // Auto-detect WoW log directory on first run — not persisted until the user saves settings
