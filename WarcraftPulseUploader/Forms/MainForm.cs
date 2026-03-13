@@ -70,16 +70,23 @@ public partial class MainForm : Form
 
         btnUpload.Enabled = false;
 
-        if (fromWatcher)
+        try
         {
-            SetStatus($"Waiting for WoW to finish writing {Path.GetFileName(filePath)}…");
-            bool stable = await WaitForFileStable(filePath, stableMs: 5000, ct);
-            if (!stable) { SetStatus("Timed out waiting for log file. Upload manually."); btnUpload.Enabled = true; return; }
-        }
+            if (fromWatcher)
+            {
+                SetStatus($"Waiting for WoW to finish writing {Path.GetFileName(filePath)}…");
+                bool stable = await WaitForFileStable(filePath, stableMs: 5000, ct);
+                if (!stable) { SetStatus("Timed out waiting for log file. Upload manually."); btnUpload.Enabled = true; return; }
+            }
 
-        SetStatus($"Parsing: {Path.GetFileName(filePath)}…");
-        // Parsing and upload wired in Task 10
-        btnUpload.Enabled = true;
+            SetStatus($"Parsing: {Path.GetFileName(filePath)}…");
+            // Parsing and upload wired in Task 10
+            btnUpload.Enabled = true;
+        }
+        catch (OperationCanceledException)
+        {
+            btnUpload.Enabled = true;
+        }
     }
 
     /// <summary>
@@ -115,6 +122,7 @@ public partial class MainForm : Form
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         _watcher?.Dispose();
+        _cts?.Cancel();
         _cts?.Dispose();
         base.OnFormClosed(e);
     }
