@@ -24,7 +24,6 @@ public partial class SettingsForm : Form
         _settings = settings;
 
         txtApiToken.Text   = settings.ApiToken;
-        txtServerUrl.Text  = settings.ServerUrl;
         txtLogDir.Text     = settings.WowLogDirectory;
         chkAutoUpload.Checked       = settings.AutoUpload;
         chkMinimizeToTray.Checked   = settings.MinimizeToTray;
@@ -52,7 +51,6 @@ public partial class SettingsForm : Form
     private void btnSave_Click(object sender, EventArgs e)
     {
         _settings.ApiToken         = txtApiToken.Text.Trim();
-        _settings.ServerUrl        = txtServerUrl.Text.Trim();
         _settings.WowLogDirectory  = txtLogDir.Text.Trim();
         _settings.AutoUpload        = chkAutoUpload.Checked;
         _settings.MinimizeToTray    = chkMinimizeToTray.Checked;
@@ -80,7 +78,7 @@ public partial class SettingsForm : Form
         btnTestToken.Enabled = false;
         btnTestToken.Text    = "Testing…";
 
-        using var http    = new HttpClient { BaseAddress = new Uri(txtServerUrl.Text.Trim().TrimEnd('/') + '/') };
+        using var http    = new HttpClient { BaseAddress = new Uri("https://warcraftpulse.com/") };
         using var request = new HttpRequestMessage(HttpMethod.Get, "api/user");
         request.Headers.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", txtApiToken.Text.Trim());

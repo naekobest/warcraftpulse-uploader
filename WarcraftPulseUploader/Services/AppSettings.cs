@@ -40,7 +40,6 @@ public sealed class AppSettings
         }
     }
 
-    public string ServerUrl { get; set; } = "https://warcraftpulse.com";
     public string WowLogDirectory { get; set; } = string.Empty;
     public bool AutoUpload { get; set; } = true;
     public bool MinimizeToTray { get; set; } = true;

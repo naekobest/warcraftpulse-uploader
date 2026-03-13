@@ -14,9 +14,11 @@ public sealed class UploadService : IDisposable
 {
     private readonly HttpClient _http;
 
-    public UploadService(string serverUrl)
+    private const string BaseUrl = "https://warcraftpulse.com/";
+
+    public UploadService()
     {
-        _http = new HttpClient { BaseAddress = new Uri(serverUrl.TrimEnd('/') + '/') };
+        _http = new HttpClient { BaseAddress = new Uri(BaseUrl) };
     }
 
     public async Task<UploadResult> UploadAsync(

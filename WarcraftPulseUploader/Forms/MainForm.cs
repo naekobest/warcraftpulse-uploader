@@ -156,7 +156,7 @@ public partial class MainForm : Form
             return;
         }
 
-        _uploader = new UploadService(_settings.ServerUrl);
+        _uploader = new UploadService();
         _watcher  = new LogWatcher(_settings.WowLogDirectory);
         _watcher.NewLogDetected += OnNewLogDetected;
         _watcher.Start();
@@ -260,7 +260,7 @@ public partial class MainForm : Form
 
             SetStatus("Uploading…", StatusKind.Processing);
 
-            _uploader ??= new UploadService(_settings.ServerUrl);
+            _uploader ??= new UploadService();
             var result = await _uploader.UploadAsync(data, _settings.ApiToken, ct);
 
             if (result.Success)

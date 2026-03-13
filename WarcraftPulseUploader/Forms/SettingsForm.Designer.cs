@@ -30,7 +30,6 @@ partial class SettingsForm
         btnShowHide         = new System.Windows.Forms.Button();
         btnTestToken        = new System.Windows.Forms.Button();
         lblTokenStatus      = new System.Windows.Forms.Label();
-        txtServerUrl        = new System.Windows.Forms.TextBox();
         txtLogDir           = new System.Windows.Forms.TextBox();
         chkAutoUpload       = new System.Windows.Forms.CheckBox();
         chkMinimizeToTray   = new System.Windows.Forms.CheckBox();
@@ -42,7 +41,7 @@ partial class SettingsForm
         Text            = "WarcraftPulse Uploader / Settings";
         BackColor       = bgWindow;
         ForeColor       = clrPrimary;
-        ClientSize      = new System.Drawing.Size(420, 378);
+        ClientSize      = new System.Drawing.Size(420, 330);
         FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
         MaximizeBox     = false;
         MinimizeBox     = false;
@@ -101,24 +100,8 @@ partial class SettingsForm
         lblTokenStatus.Location  = new System.Drawing.Point(x, y);
         lblTokenStatus.Size      = new System.Drawing.Size(w, 18);
 
-        // ── Server URL ───────────────────────────────────────────────────
-        y += 26;
-        var lblServerUrl = new System.Windows.Forms.Label();
-        lblServerUrl.Text      = "Server URL";
-        lblServerUrl.ForeColor = clrSecond;
-        lblServerUrl.Font      = new System.Drawing.Font("Segoe UI", 8f);
-        lblServerUrl.Location  = new System.Drawing.Point(x, y);
-        lblServerUrl.Size      = new System.Drawing.Size(200, 16);
-
-        y += 18;
-        txtServerUrl.BackColor  = bgInput;
-        txtServerUrl.ForeColor  = clrSecond;
-        txtServerUrl.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-        txtServerUrl.Location   = new System.Drawing.Point(x, y);
-        txtServerUrl.Size       = new System.Drawing.Size(w, 23);
-
         // ── WoW Log Directory ────────────────────────────────────────────
-        y += 34;
+        y += 26;
         var lblLogDir = new System.Windows.Forms.Label();
         lblLogDir.Text      = "WoW Log Directory";
         lblLogDir.ForeColor = clrPrimary;
@@ -239,7 +222,6 @@ partial class SettingsForm
         Controls.AddRange(new System.Windows.Forms.Control[] {
             lblApiToken, lblTokenHint,
             txtApiToken, btnShowHide, btnTestToken, lblTokenStatus,
-            lblServerUrl, txtServerUrl,
             lblLogDir, txtLogDir, btnBrowse,
             chkAutoUpload, chkMinimizeToTray, chkStartWithWindows,
             pnlFooter,
@@ -253,7 +235,6 @@ partial class SettingsForm
     private System.Windows.Forms.Button   btnShowHide         = null!;
     private System.Windows.Forms.Button   btnTestToken        = null!;
     private System.Windows.Forms.Label    lblTokenStatus      = null!;
-    private System.Windows.Forms.TextBox  txtServerUrl        = null!;
     private System.Windows.Forms.TextBox  txtLogDir           = null!;
     private System.Windows.Forms.CheckBox chkAutoUpload       = null!;
     private System.Windows.Forms.CheckBox chkMinimizeToTray   = null!;
