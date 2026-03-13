@@ -474,12 +474,23 @@ public static class CombatLogParser
             if (c == '"') { inQuote = !inQuote; }
             else if (c == ',' && !inQuote)
             {
-                fields.Add(new string(line[start..i]));
+                fields.Add(ExtractUnquoted(line[start..i]));
                 start = i + 1;
             }
         }
-        fields.Add(new string(line[start..]));
+        fields.Add(ExtractUnquoted(line[start..]));
         return fields.ToArray();
+    }
+
+    private static string ExtractUnquoted(ReadOnlySpan<char> field)
+    {
+        if (field.IndexOf('"') < 0)
+            return new string(field);
+        // Strip quote characters — WoW log fields use quotes as delimiters, not content
+        var sb = new System.Text.StringBuilder(field.Length);
+        foreach (char c in field)
+            if (c != '"') sb.Append(c);
+        return sb.ToString();
     }
 
     private static uint ParseHex(string s)
