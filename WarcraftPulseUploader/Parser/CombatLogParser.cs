@@ -12,7 +12,7 @@ public static class CombatLogParser
 
     public static CombatLogData Parse(string filePath)
     {
-        using var reader = new StreamReader(filePath);
+        using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 65536);
 
         var header = reader.ReadLine()
             ?? throw new ParseException("File is empty.");
@@ -68,7 +68,7 @@ public static class CombatLogParser
             reportStart ??= ts;
             reportEnd     = ts;
 
-            var fields = SplitCsvLine(rest);
+            var fields = SplitCsvLine(rest.AsSpan());
             if (fields.Length == 0) continue;
             string eventType = fields[0];
 
@@ -462,20 +462,24 @@ public static class CombatLogParser
         return true;
     }
 
-    private static string[] SplitCsvLine(string line)
+    private static string[] SplitCsvLine(ReadOnlySpan<char> line)
     {
-        var fields = new List<string>();
+        var fields = new List<string>(16);
         bool inQuote = false;
-        var cur = new System.Text.StringBuilder();
+        int start = 0;
 
-        foreach (char c in line)
+        for (int i = 0; i < line.Length; i++)
         {
+            char c = line[i];
             if (c == '"') { inQuote = !inQuote; }
-            else if (c == ',' && !inQuote) { fields.Add(cur.ToString()); cur.Clear(); }
-            else cur.Append(c);
+            else if (c == ',' && !inQuote)
+            {
+                fields.Add(new string(line[start..i]));
+                start = i + 1;
+            }
         }
-        fields.Add(cur.ToString());
-        return [.. fields];
+        fields.Add(new string(line[start..]));
+        return fields.ToArray();
     }
 
     private static uint ParseHex(string s)

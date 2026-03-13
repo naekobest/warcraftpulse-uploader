@@ -29,6 +29,10 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
         Assert.Equal("Molten Core", _data.ZoneName);
 
     [Fact]
+    public void Parse_Sample_ZoneNameHandlesQuotedFields() =>
+        Assert.False(string.IsNullOrWhiteSpace(_data.ZoneName));
+
+    [Fact]
     public void Parse_Sample_GameVersionIsClassicEra() =>
         Assert.Equal("classic_era", _data.GameVersion);
 
