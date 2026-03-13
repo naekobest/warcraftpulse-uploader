@@ -29,8 +29,8 @@ public partial class MainForm : Form
         using var form = new SettingsForm(_settings);
         if (form.ShowDialog() == DialogResult.OK)
         {
-            _settings = AppSettings.Load();
             UpdateTokenWarning();
+            // TODO Task 8: restart LogWatcher with (possibly new) directory
         }
     }
 

@@ -73,7 +73,7 @@ partial class MainForm
     // Control fields
     private Label  lblStatus       = null!;
     private Label  lblTokenWarning = null!;
-    protected Button btnUpload        = null!;
+    private Button btnUpload        = null!;
     private Button btnOpenReport    = null!;
     private Button btnSettings      = null!;
 }

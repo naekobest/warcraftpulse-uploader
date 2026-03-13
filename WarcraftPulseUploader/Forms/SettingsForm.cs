@@ -51,7 +51,8 @@ public partial class SettingsForm : Form
     {
         const string KeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
         const string AppName = "WarcraftPulseUploader";
-        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KeyPath, writable: true)!;
+        using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KeyPath, writable: true);
+        if (key is null) return;
         if (enable)
             key.SetValue(AppName, Application.ExecutablePath);
         else
