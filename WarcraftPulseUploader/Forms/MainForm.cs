@@ -178,7 +178,7 @@ public partial class MainForm : Form
                     FileHash   = fileHash,
                     ZoneName   = data.ZoneName,
                     FightCount = data.Fights.Count,
-                    KillCount  = data.Fights.Count(f => f.Kill),
+                    KillCount  = kills,
                     ReportCode = result.ReportCode!,
                     StatusUrl  = result.StatusUrl!,
                     UploadedAt = DateTime.UtcNow,
