@@ -54,7 +54,8 @@ public partial class MainForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        DarkMode.Apply(Handle);
+        DarkMode.ApplyToWindow(Handle);
+        DarkMode.ApplyToControl(lvHistory.Handle);
     }
 
     protected override void OnLoad(EventArgs e)

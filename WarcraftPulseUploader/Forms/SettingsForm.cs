@@ -12,7 +12,10 @@ public partial class SettingsForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        DarkMode.Apply(Handle);
+        DarkMode.ApplyToWindow(Handle);
+        DarkMode.ApplyToControl(chkAutoUpload.Handle);
+        DarkMode.ApplyToControl(chkMinimizeToTray.Handle);
+        DarkMode.ApplyToControl(chkStartWithWindows.Handle);
     }
 
     public SettingsForm(AppSettings settings)
