@@ -32,6 +32,7 @@ public partial class MainForm : Form
     private void StartWatcher()
     {
         _watcher?.Dispose();
+        _uploader?.Dispose();
         if (string.IsNullOrEmpty(_settings.WowLogDirectory)) return;
 
         _uploader = new UploadService(_settings.ServerUrl);
@@ -101,7 +102,8 @@ public partial class MainForm : Form
 
             SetStatus("Uploading…");
 
-            var result = await _uploader!.UploadAsync(data, _settings.ApiToken, ct);
+            _uploader ??= new UploadService(_settings.ServerUrl);
+            var result = await _uploader.UploadAsync(data, _settings.ApiToken, ct);
 
             if (result.Success)
             {
@@ -186,6 +188,7 @@ public partial class MainForm : Form
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
         _watcher?.Dispose();
+        _uploader?.Dispose();
         _cts?.Cancel();
         _cts?.Dispose();
         base.OnFormClosed(e);

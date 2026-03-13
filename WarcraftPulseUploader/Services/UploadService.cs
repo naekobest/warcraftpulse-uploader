@@ -9,7 +9,7 @@ namespace WarcraftPulseUploader.Services;
 // UploadService is intentionally kept as a long-lived singleton in MainForm (_uploader field).
 // HttpClient must NOT be created per-request — that causes socket exhaustion.
 // MainForm recreates the UploadService only when the server URL changes (settings saved).
-public sealed class UploadService
+public sealed class UploadService : IDisposable
 {
     private readonly HttpClient _http;
 
@@ -81,6 +81,8 @@ public sealed class UploadService
 
         return UploadResult.Fail($"Server error {(int)response.StatusCode}.");
     }
+
+    public void Dispose() => _http.Dispose();
 }
 
 public sealed class UploadResult
