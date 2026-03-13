@@ -498,7 +498,7 @@ public partial class MainForm : Form
             if (e.ColumnIndex == 0)
                 TextRenderer.DrawText(e.Graphics, "No uploads yet", FontNormal,
                     new System.Drawing.Rectangle(0, e.Bounds.Y, lvHistory.Width, e.Bounds.Height),
-                    ClrMuted, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
+                    ClrSecond, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
             return;
         }
 
@@ -527,9 +527,9 @@ public partial class MainForm : Form
                     pillFg     = System.Drawing.Color.FromArgb(245, 158, 11);
                     break;
                 default: // Ignored
-                    pillBg     = System.Drawing.Color.FromArgb(20, 58, 66, 96);
-                    pillBorder = ClrMuted;
-                    pillFg     = ClrMuted;
+                    pillBg     = System.Drawing.Color.FromArgb(20, 88, 153, 187);
+                    pillBorder = ClrSecond;
+                    pillFg     = ClrSecond;
                     break;
             }
 

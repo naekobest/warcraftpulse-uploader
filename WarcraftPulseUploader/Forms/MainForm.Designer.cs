@@ -63,8 +63,8 @@ partial class MainForm
         pnlStats.Size      = new System.Drawing.Size(440, 68);
 
         lblUploadsHeader.Text      = "TOTAL UPLOADED";
-        lblUploadsHeader.ForeColor = clrMuted;
-        lblUploadsHeader.Font      = new System.Drawing.Font("Segoe UI", 7f);
+        lblUploadsHeader.ForeColor = clrSecond;
+        lblUploadsHeader.Font      = new System.Drawing.Font("Segoe UI", 7.5f);
         lblUploadsHeader.Location  = new System.Drawing.Point(12, 10);
         lblUploadsHeader.Size      = new System.Drawing.Size(160, 13);
 
@@ -80,8 +80,8 @@ partial class MainForm
         pnlDivider.Size      = new System.Drawing.Size(1, 52);
 
         lblStatusHeader.Text      = "STATUS";
-        lblStatusHeader.ForeColor = clrMuted;
-        lblStatusHeader.Font      = new System.Drawing.Font("Segoe UI", 7f);
+        lblStatusHeader.ForeColor = clrSecond;
+        lblStatusHeader.Font      = new System.Drawing.Font("Segoe UI", 7.5f);
         lblStatusHeader.Location  = new System.Drawing.Point(212, 10);
         lblStatusHeader.Size      = new System.Drawing.Size(80, 13);
 
@@ -105,8 +105,8 @@ partial class MainForm
 
         // ── Section label ────────────────────────────────────────────────
         lblSectionHeader.Text      = "UPLOAD HISTORY";
-        lblSectionHeader.ForeColor = clrMuted;
-        lblSectionHeader.Font      = new System.Drawing.Font("Segoe UI", 7f);
+        lblSectionHeader.ForeColor = clrSecond;
+        lblSectionHeader.Font      = new System.Drawing.Font("Segoe UI", 7.5f);
         lblSectionHeader.BackColor = bgDark;
         lblSectionHeader.Location  = new System.Drawing.Point(0, 68);
         lblSectionHeader.Size      = new System.Drawing.Size(440, 24);
@@ -171,10 +171,10 @@ partial class MainForm
         pnlFooter.Size      = new System.Drawing.Size(440, 58);
 
         lblLogPath.Text         = "No log directory configured";
-        lblLogPath.ForeColor    = clrMuted;
-        lblLogPath.Font         = new System.Drawing.Font("Consolas", 7.5f);
-        lblLogPath.Location     = new System.Drawing.Point(12, 6);
-        lblLogPath.Size         = new System.Drawing.Size(416, 14);
+        lblLogPath.ForeColor    = clrSecond;
+        lblLogPath.Font         = new System.Drawing.Font("Consolas", 8.5f);
+        lblLogPath.Location     = new System.Drawing.Point(12, 5);
+        lblLogPath.Size         = new System.Drawing.Size(416, 16);
         lblLogPath.AutoEllipsis = true;
 
         btnUpload.Text      = "Upload…";
