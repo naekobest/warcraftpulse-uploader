@@ -61,9 +61,15 @@ public sealed class SpecEntry
     [JsonPropertyName("spec")] public string? Spec { get; set; }
 }
 
+public sealed class EntryItem
+{
+    [JsonPropertyName("name")]  public string Name  { get; set; } = "";
+    [JsonPropertyName("total")] public long   Total { get; set; }
+}
+
 public sealed class EntriesWrapper
 {
-    [JsonPropertyName("entries")] public List<Dictionary<string, object>> Entries { get; set; } = [];
+    [JsonPropertyName("entries")] public List<EntryItem> Entries { get; set; } = [];
 }
 
 public sealed class AurasWrapper

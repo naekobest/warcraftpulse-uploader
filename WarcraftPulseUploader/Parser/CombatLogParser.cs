@@ -357,10 +357,10 @@ public static class CombatLogParser
         foreach (var (fightId, actorTotals) in source)
         {
             var entries = actorTotals
-                .Select(kv => new Dictionary<string, object>
+                .Select(kv => new EntryItem
                 {
-                    ["name"]  = meta.TryGetValue(kv.Key, out var m) ? m.Name : kv.Key.ToString(),
-                    ["total"] = kv.Value,
+                    Name  = meta.TryGetValue(kv.Key, out var m) ? m.Name : kv.Key.ToString(),
+                    Total = kv.Value,
                 })
                 .ToList();
             result[fightId] = new EntriesWrapper { Entries = entries };

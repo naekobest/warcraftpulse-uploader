@@ -47,6 +47,14 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
     }
 
     [Fact]
+    public void Parse_Sample_DamageDoneEntryHasNameAndTotal()
+    {
+        var entry = _data.DamageDone["1"].Entries[0];
+        Assert.False(string.IsNullOrEmpty(entry.Name));
+        Assert.True(entry.Total > 0);
+    }
+
+    [Fact]
     public void Parse_Sample_HealingPopulated()
     {
         Assert.True(_data.Healing.ContainsKey("1"));
