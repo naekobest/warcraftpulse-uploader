@@ -103,4 +103,41 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
             File.Delete(path);
         }
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not a combat log")]
+    [InlineData("  \t  \n  ")]
+    [InlineData("1/1 0:00:00.000  COMBAT_LOG_VERSION,20,advanced,1,PROJECT_ID,2")]
+    public void Parse_DoesNotThrow_OnMalformedInput(string content)
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, content);
+            try { CombatLogParser.ParseWithSizeGuard(path); }
+            catch (ParseException) { /* expected for invalid logs */ }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Parse_DoesNotThrow_OnVeryLongLine()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var longLine = new string('A', 1_000_000);
+            File.WriteAllText(path, longLine);
+            try { CombatLogParser.ParseWithSizeGuard(path); }
+            catch (ParseException) { /* expected */ }
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }
