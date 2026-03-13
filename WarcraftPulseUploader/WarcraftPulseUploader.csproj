@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\logo.ico" />
+    <EmbeddedResource Include="Resources\logo_24.png" />
   </ItemGroup>
 
   <PropertyGroup>

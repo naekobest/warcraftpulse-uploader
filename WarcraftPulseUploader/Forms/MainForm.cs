@@ -37,6 +37,7 @@ public partial class MainForm : Form
 
         var appIcon = LoadAppIcon();
         if (appIcon is not null) Icon = appIcon;
+        picLogo.Image = LoadLogoPng();
 
         _trayIcon = new NotifyIcon
         {
@@ -98,6 +99,17 @@ public partial class MainForm : Form
             var asm    = System.Reflection.Assembly.GetExecutingAssembly();
             var stream = asm.GetManifestResourceStream("WarcraftPulseUploader.Resources.logo.ico");
             return stream is null ? null : new System.Drawing.Icon(stream);
+        }
+        catch { return null; }
+    }
+
+    private static System.Drawing.Image? LoadLogoPng()
+    {
+        try
+        {
+            var asm    = System.Reflection.Assembly.GetExecutingAssembly();
+            var stream = asm.GetManifestResourceStream("WarcraftPulseUploader.Resources.logo_24.png");
+            return stream is null ? null : System.Drawing.Image.FromStream(stream);
         }
         catch { return null; }
     }

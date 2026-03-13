@@ -27,6 +27,7 @@ partial class MainForm
         var clrBorder  = System.Drawing.Color.FromArgb(0x25, 0x25, 0x35);
 
         pnlStats    = new System.Windows.Forms.Panel();
+        picLogo     = new System.Windows.Forms.PictureBox();
         lblUploads  = new System.Windows.Forms.Label();
         pnlDivider  = new System.Windows.Forms.Panel();
         lblDot      = new System.Windows.Forms.Label();
@@ -58,33 +59,40 @@ partial class MainForm
         pnlStats.Location  = new System.Drawing.Point(0, 0);
         pnlStats.Size      = new System.Drawing.Size(440, 52);
 
+        ((System.ComponentModel.ISupportInitialize)picLogo).BeginInit();
+        picLogo.Location  = new System.Drawing.Point(12, 14);
+        picLogo.Size      = new System.Drawing.Size(24, 24);
+        picLogo.SizeMode  = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+        picLogo.BackColor = System.Drawing.Color.Transparent;
+        ((System.ComponentModel.ISupportInitialize)picLogo).EndInit();
+
         lblUploads.Text      = "0 Uploads";
         lblUploads.ForeColor = clrBlue;
         lblUploads.Font      = new System.Drawing.Font("Segoe UI", 10f, System.Drawing.FontStyle.Bold);
-        lblUploads.Location  = new System.Drawing.Point(12, 14);
-        lblUploads.Size      = new System.Drawing.Size(160, 24);
+        lblUploads.Location  = new System.Drawing.Point(44, 14);
+        lblUploads.Size      = new System.Drawing.Size(148, 24);
         lblUploads.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 
         pnlDivider.BackColor = clrBorder;
-        pnlDivider.Location  = new System.Drawing.Point(185, 12);
+        pnlDivider.Location  = new System.Drawing.Point(205, 12);
         pnlDivider.Size      = new System.Drawing.Size(1, 28);
 
         lblDot.Text      = "●";
         lblDot.ForeColor = clrMuted;
         lblDot.Font      = new System.Drawing.Font("Segoe UI", 9f);
-        lblDot.Location  = new System.Drawing.Point(196, 15);
+        lblDot.Location  = new System.Drawing.Point(216, 15);
         lblDot.Size      = new System.Drawing.Size(18, 22);
         lblDot.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 
         lblStatus.Text      = "Starting…";
         lblStatus.ForeColor = clrSecond;
         lblStatus.Font      = new System.Drawing.Font("Segoe UI", 9f);
-        lblStatus.Location  = new System.Drawing.Point(218, 15);
-        lblStatus.Size      = new System.Drawing.Size(210, 22);
+        lblStatus.Location  = new System.Drawing.Point(238, 15);
+        lblStatus.Size      = new System.Drawing.Size(190, 22);
         lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 
         pnlStats.Controls.AddRange(new System.Windows.Forms.Control[] {
-            lblUploads, pnlDivider, lblDot, lblStatus,
+            picLogo, lblUploads, pnlDivider, lblDot, lblStatus,
         });
 
         // ── Onboarding banner ────────────────────────────────────────────
@@ -189,8 +197,9 @@ partial class MainForm
     }
 
     // Control fields
-    private System.Windows.Forms.Panel    pnlStats    = null!;
-    private System.Windows.Forms.Label    lblUploads  = null!;
+    private System.Windows.Forms.Panel      pnlStats    = null!;
+    private System.Windows.Forms.PictureBox picLogo     = null!;
+    private System.Windows.Forms.Label      lblUploads  = null!;
     private System.Windows.Forms.Panel    pnlDivider  = null!;
     private System.Windows.Forms.Label    lblDot      = null!;
     private System.Windows.Forms.Label    lblStatus   = null!;
