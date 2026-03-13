@@ -57,6 +57,8 @@ public partial class SettingsForm : Form
         _settings.StartWithWindows  = chkStartWithWindows.Checked;
         ApplyStartWithWindows(_settings.StartWithWindows);
         _settings.Save();
+        // Clear token from memory after persisting via DPAPI
+        txtApiToken.Text = string.Empty;
         DialogResult = DialogResult.OK;
         Close();
     }
