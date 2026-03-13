@@ -1,8 +1,8 @@
 // Services/UploadService.cs
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
+using WarcraftPulseUploader;
 using WarcraftPulseUploader.Parser;
 
 namespace WarcraftPulseUploader.Services;
@@ -26,8 +26,10 @@ public sealed class UploadService : IDisposable
         string apiToken,
         CancellationToken ct = default)
     {
-        var payloadJson = JsonSerializer.Serialize(data);
-        int payloadKb   = Encoding.UTF8.GetByteCount(payloadJson) / 1024;
+        // Serialize on a background thread — synchronous serialization of large logs blocks the UI thread.
+        byte[] payloadBytes = await Task.Run(
+            () => JsonSerializer.SerializeToUtf8Bytes(data, AppJsonContext.Default.CombatLogData), ct);
+        int payloadKb = payloadBytes.Length / 1024;
 
         int[] backoffMs = [0, 1000, 2000];
         Exception? lastEx = null;
@@ -41,7 +43,9 @@ public sealed class UploadService : IDisposable
             // HttpRequestMessage cannot be reused after SendAsync — re-create on each attempt
             using var request = new HttpRequestMessage(HttpMethod.Post, "api/reports/upload-parsed");
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiToken);
-            request.Content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
+            var content = new ByteArrayContent(payloadBytes);
+            content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+            request.Content = content;
 
             try
             {
