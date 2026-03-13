@@ -10,10 +10,20 @@ public partial class MainForm : Form
     private LogWatcher?    _watcher;
     private UploadService? _uploader;
     private CancellationTokenSource? _cts;
+    private readonly NotifyIcon _trayIcon;
 
     public MainForm()
     {
         InitializeComponent();
+
+        _trayIcon = new NotifyIcon
+        {
+            Text             = "WarcraftPulse Uploader",
+            Icon             = SystemIcons.Application,   // replace with app icon once one exists
+            Visible          = true,
+            ContextMenuStrip = BuildTrayMenu(),
+        };
+        _trayIcon.DoubleClick += (_, _) => ShowWindow();
 
         var version = System.Reflection.Assembly
             .GetExecutingAssembly()
@@ -27,6 +37,41 @@ public partial class MainForm : Form
         base.OnLoad(e);
         StartWatcher();
         UpdateTokenWarning();
+
+        // Sync registry state with current setting (handles setting changed outside the app)
+        if (_settings.StartWithWindows)
+            SettingsForm.ApplyStartWithWindows(true);
+    }
+
+    private ContextMenuStrip BuildTrayMenu()
+    {
+        var menu = new ContextMenuStrip();
+        menu.Items.Add("Open",             null, (_, _) => ShowWindow());
+        menu.Items.Add("Upload Log File…", null, (_, _) => btnUpload_Click(this, EventArgs.Empty));
+        menu.Items.Add(new ToolStripSeparator());
+        menu.Items.Add("Exit",             null, (_, _) => Application.Exit());
+        return menu;
+    }
+
+    private void ShowWindow()
+    {
+        Show();
+        WindowState = FormWindowState.Normal;
+        Activate();
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs e)
+    {
+        if (_settings.MinimizeToTray && e.CloseReason == CloseReason.UserClosing)
+        {
+            e.Cancel = true;
+            Hide();
+            _trayIcon.ShowBalloonTip(2000, "WarcraftPulse Uploader",
+                "Still running in the background.", ToolTipIcon.Info);
+            return;
+        }
+        _trayIcon.Visible = false;
+        base.OnFormClosing(e);
     }
 
     private void StartWatcher()
@@ -187,6 +232,7 @@ public partial class MainForm : Form
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {
+        _trayIcon.Dispose();
         _watcher?.Dispose();
         _uploader?.Dispose();
         _cts?.Cancel();
