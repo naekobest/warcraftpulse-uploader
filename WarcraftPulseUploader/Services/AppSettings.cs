@@ -48,18 +48,30 @@ public sealed class AppSettings
 
     public static AppSettings Load()
     {
-        if (!File.Exists(SettingsPath))
-            return new AppSettings();
+        AppSettings settings;
 
-        try
+        if (!File.Exists(SettingsPath))
         {
-            var json = File.ReadAllText(SettingsPath);
-            return JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            settings = new AppSettings();
         }
-        catch
+        else
         {
-            return new AppSettings();
+            try
+            {
+                var json = File.ReadAllText(SettingsPath);
+                settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+            }
+            catch
+            {
+                settings = new AppSettings();
+            }
         }
+
+        // Auto-detect WoW log directory on first run — not persisted until the user saves settings
+        if (string.IsNullOrEmpty(settings.WowLogDirectory))
+            settings.WowLogDirectory = WowDirectoryDetector.Detect() ?? string.Empty;
+
+        return settings;
     }
 
     public void Save()
