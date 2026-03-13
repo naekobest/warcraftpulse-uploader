@@ -204,6 +204,7 @@ public partial class MainForm : Form
         }
         catch (OperationCanceledException)
         {
+            SetStatus("Upload cancelled.");
             btnUpload.Enabled = true;
         }
     }

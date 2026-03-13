@@ -71,7 +71,7 @@ public partial class SettingsForm : Form
 
         try
         {
-            var response = await http.SendAsync(request);
+            using var response = await http.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();

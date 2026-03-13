@@ -50,21 +50,34 @@ public sealed class UploadService : IDisposable
         if (lastEx is not null)
             return UploadResult.Fail($"Network error after 3 attempts: {lastEx.Message}");
 
-        if (response!.IsSuccessStatusCode)
-        {
-            var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
-            return UploadResult.Ok(
-                json.GetProperty("report_code").GetString()!,
-                json.GetProperty("status_url").GetString()!
-            );
-        }
+        using var resp = response!;
 
-        // Parse Laravel validation errors (422) into a human-readable message
-        if (response.StatusCode == HttpStatusCode.UnprocessableEntity)
+        if (resp.IsSuccessStatusCode)
         {
             try
             {
-                var err = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+                var json = await resp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+                if (!json.TryGetProperty("report_code", out var codeEl) ||
+                    !json.TryGetProperty("status_url",  out var urlEl))
+                    return UploadResult.Fail("Server returned unexpected response format.");
+
+                return UploadResult.Ok(
+                    codeEl.GetString() ?? "",
+                    urlEl.GetString()  ?? ""
+                );
+            }
+            catch (JsonException)
+            {
+                return UploadResult.Fail("Server returned non-JSON response.");
+            }
+        }
+
+        // Parse Laravel validation errors (422) into a human-readable message
+        if (resp.StatusCode == HttpStatusCode.UnprocessableEntity)
+        {
+            try
+            {
+                var err = await resp.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
                 if (err.TryGetProperty("errors", out var errors))
                 {
                     var messages = errors.EnumerateObject()
@@ -73,13 +86,13 @@ public sealed class UploadService : IDisposable
                     return UploadResult.Fail("Validation failed: " + string.Join("; ", messages));
                 }
             }
-            catch { /* fall through to generic error */ }
+            catch (Exception) { /* fall through to generic error */ }
         }
 
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        if (resp.StatusCode == HttpStatusCode.Unauthorized)
             return UploadResult.Fail("Invalid or expired API token. Check Settings → Access Tokens.");
 
-        return UploadResult.Fail($"Server error {(int)response.StatusCode}.");
+        return UploadResult.Fail($"Server error {(int)resp.StatusCode}.");
     }
 
     public void Dispose() => _http.Dispose();

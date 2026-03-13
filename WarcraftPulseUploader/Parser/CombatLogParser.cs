@@ -128,7 +128,7 @@ public static class CombatLogParser
                     break;
 
                 case "COMBATANT_INFO":
-                    if (openFightId is int cfFightId && fields.Length >= 2)
+                    if (openFightId is int cfFightId && fields.Length >= 3)
                     {
                         string guid    = fields[1];
                         int    actorId = GetOrAdd(actorMap, guid, ref nextActorId);

@@ -39,7 +39,7 @@ public sealed class UploadHistory
             var json = File.ReadAllText(HistoryPath);
             h._entries = JsonSerializer.Deserialize<List<UploadEntry>>(json) ?? [];
         }
-        catch { /* corrupt history — start fresh */ }
+        catch (Exception) { /* corrupt history — start fresh */ }
         return h;
     }
 

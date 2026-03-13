@@ -36,7 +36,7 @@ public sealed class AppSettings
                         null,
                         System.Security.Cryptography.DataProtectionScope.CurrentUser));
             }
-            catch { ApiToken = ""; }  // encrypted by different user or corrupted — reset
+            catch (Exception) { ApiToken = ""; }  // encrypted by different user or corrupted — reset
         }
     }
 
@@ -61,7 +61,7 @@ public sealed class AppSettings
                 var json = File.ReadAllText(SettingsPath);
                 settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
             }
-            catch
+            catch (Exception)
             {
                 settings = new AppSettings();
             }
