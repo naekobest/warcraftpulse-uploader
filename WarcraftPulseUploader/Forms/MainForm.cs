@@ -37,7 +37,6 @@ public partial class MainForm : Form
 
         var appIcon = LoadAppIcon();
         if (appIcon is not null) Icon = appIcon;
-        picLogo.Image = LoadLogoPng();
 
         _trayIcon = new NotifyIcon
         {
@@ -81,8 +80,10 @@ public partial class MainForm : Form
         // Button hover states
         WireHover(btnUpload,   ClrBlue, System.Drawing.Color.FromArgb(0x60, 0x78, 0xf8));
         WireHover(btnOnboard,  ClrBlue, System.Drawing.Color.FromArgb(0x60, 0x78, 0xf8));
-        WireHover(btnSettings, System.Drawing.Color.FromArgb(0x1e, 0x1e, 0x2e),
-                               System.Drawing.Color.FromArgb(0x25, 0x25, 0x40));
+        var cardHover = System.Drawing.Color.FromArgb(0x25, 0x25, 0x40);
+        var cardNormal = System.Drawing.Color.FromArgb(0x1e, 0x1e, 0x2e);
+        WireHover(btnSettings, cardNormal, cardHover);
+        WireHover(btnHistory,  cardNormal, cardHover);
 
         StartWatcher();
         UpdateOnboardingBanner();
@@ -99,17 +100,6 @@ public partial class MainForm : Form
             var asm    = System.Reflection.Assembly.GetExecutingAssembly();
             var stream = asm.GetManifestResourceStream("WarcraftPulseUploader.Resources.logo.ico");
             return stream is null ? null : new System.Drawing.Icon(stream);
-        }
-        catch { return null; }
-    }
-
-    private static System.Drawing.Image? LoadLogoPng()
-    {
-        try
-        {
-            var asm    = System.Reflection.Assembly.GetExecutingAssembly();
-            var stream = asm.GetManifestResourceStream("WarcraftPulseUploader.Resources.logo_24.png");
-            return stream is null ? null : System.Drawing.Image.FromStream(stream);
         }
         catch { return null; }
     }
@@ -413,15 +403,15 @@ public partial class MainForm : Form
     {
         bool show = string.IsNullOrEmpty(_settings.ApiToken);
         pnlOnboard.Visible = show;
-        lvHistory.Location = new System.Drawing.Point(0, show ? 108 : 52);
-        lvHistory.Height   = show ? 354 : 410;
+        lvHistory.Location = new System.Drawing.Point(0, show ? 148 : 92);
+        lvHistory.Height   = show ? 338 : 394;
     }
 
     private void RefreshHistory()
     {
         lvHistory.Items.Clear();
         int count = _history.Entries.Count;
-        lblUploads.Text = $"{count} Upload{(count == 1 ? "" : "s")}";
+        lblUploads.Text = count.ToString();
 
         if (count == 0)
         {
@@ -434,14 +424,28 @@ public partial class MainForm : Form
 
         foreach (var entry in _history.Entries)
         {
-            string sizeLabel = entry.PayloadKb > 0 ? $"{entry.PayloadKb} KB" : entry.ZoneName;
+            string sizeLabel = entry.PayloadKb > 0 ? $"{entry.PayloadKb} KB" : "";
+            string dateLabel = entry.UploadedAt.ToLocalTime().ToString("MMM dd · HH:mm");
             var item = new ListViewItem(entry.FileName);
             item.SubItems.Add(sizeLabel);
             item.SubItems.Add("Uploaded");
-            item.SubItems.Add(entry.UploadedAt.ToLocalTime().ToString("MM/dd"));
+            item.SubItems.Add(dateLabel);
             item.Tag = entry.StatusUrl;
             lvHistory.Items.Add(item);
         }
+    }
+
+    private void btnHistory_Click(object sender, EventArgs e)
+    {
+        if (_history.Entries.Count == 0)
+        {
+            MessageBox.Show("No uploads yet.", "History", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+        var sb = new System.Text.StringBuilder();
+        foreach (var entry in _history.Entries)
+            sb.AppendLine($"{entry.UploadedAt.ToLocalTime():MMM dd · HH:mm}  {entry.FileName}  ({entry.PayloadKb} KB)  {entry.ReportCode}");
+        MessageBox.Show(sb.ToString(), "Upload History", MessageBoxButtons.OK, MessageBoxIcon.None);
     }
 
     private void lvHistory_DoubleClick(object sender, EventArgs e)
@@ -476,10 +480,17 @@ public partial class MainForm : Form
     {
         bool isSelected    = e.Item?.Selected ?? false;
         bool isPlaceholder = e.Item?.Tag is null;
+        string badge = e.Item?.SubItems.Count > 2 ? e.Item.SubItems[2].Text : "";
+        bool isFailed = badge == "Failed";
 
-        var bg = isSelected
-            ? ClrSelect
-            : e.ItemIndex % 2 == 0 ? ClrDark : ClrDarkAlt;
+        System.Drawing.Color bg;
+        if (isSelected)
+            bg = ClrSelect;
+        else if (isFailed)
+            bg = System.Drawing.Color.FromArgb(30, 248, 113, 113);
+        else
+            bg = e.ItemIndex % 2 == 0 ? ClrDark : ClrDarkAlt;
+
         e.Graphics.FillRectangle(new System.Drawing.SolidBrush(bg), e.Bounds);
 
         if (isPlaceholder)
@@ -491,17 +502,71 @@ public partial class MainForm : Form
             return;
         }
 
-        // Badge column
+        // Badge column — pill shape
         if (e.ColumnIndex == 2)
         {
-            TextRenderer.DrawText(e.Graphics, e.SubItem!.Text, FontSmall, e.Bounds,
-                ClrGreen, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
+            string text = e.SubItem!.Text;
+            if (string.IsNullOrEmpty(text)) return;
+
+            System.Drawing.Color pillBg, pillFg, pillBorder;
+            switch (text)
+            {
+                case "Uploaded":
+                    pillBg     = System.Drawing.Color.FromArgb(25, 74, 222, 128);
+                    pillBorder = System.Drawing.Color.FromArgb(120, 74, 222, 128);
+                    pillFg     = ClrGreen;
+                    break;
+                case "Failed":
+                    pillBg     = System.Drawing.Color.FromArgb(40, 248, 113, 113);
+                    pillBorder = System.Drawing.Color.FromArgb(160, 248, 113, 113);
+                    pillFg     = ClrRed;
+                    break;
+                case "Duplicate":
+                    pillBg     = System.Drawing.Color.FromArgb(25, 245, 158, 11);
+                    pillBorder = System.Drawing.Color.FromArgb(140, 245, 158, 11);
+                    pillFg     = System.Drawing.Color.FromArgb(245, 158, 11);
+                    break;
+                default: // Ignored
+                    pillBg     = System.Drawing.Color.FromArgb(20, 58, 66, 96);
+                    pillBorder = ClrMuted;
+                    pillFg     = ClrMuted;
+                    break;
+            }
+
+            var sz  = TextRenderer.MeasureText(text, FontSmall);
+            int pw  = sz.Width + 14;
+            int ph  = 18;
+            int px  = e.Bounds.X + (e.Bounds.Width - pw) / 2;
+            int py  = e.Bounds.Y + (e.Bounds.Height - ph) / 2;
+
+            var prev = e.Graphics.SmoothingMode;
+            e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            using var path = RoundedRectPath(new System.Drawing.RectangleF(px, py, pw, ph), 9f);
+            e.Graphics.FillPath(new System.Drawing.SolidBrush(pillBg), path);
+            e.Graphics.DrawPath(new System.Drawing.Pen(pillBorder, 1f), path);
+            e.Graphics.SmoothingMode = prev;
+
+            TextRenderer.DrawText(e.Graphics, text, FontSmall,
+                new System.Drawing.Rectangle(px, py, pw, ph),
+                pillFg, TextFormatFlags.VerticalCenter | TextFormatFlags.HorizontalCenter);
             return;
         }
 
-        var fg   = e.ColumnIndex == 3 ? ClrSecond : ClrPrimary;
-        var rect = new System.Drawing.Rectangle(e.Bounds.X + 6, e.Bounds.Y, e.Bounds.Width - 6, e.Bounds.Height);
+        var fg   = e.ColumnIndex >= 3 ? ClrSecond : (isFailed && e.ColumnIndex == 0 ? ClrRed : ClrPrimary);
+        var rect = new System.Drawing.Rectangle(e.Bounds.X + 8, e.Bounds.Y, e.Bounds.Width - 8, e.Bounds.Height);
         TextRenderer.DrawText(e.Graphics, e.SubItem!.Text, FontNormal, rect,
             fg, TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis);
+    }
+
+    private static System.Drawing.Drawing2D.GraphicsPath RoundedRectPath(System.Drawing.RectangleF r, float radius)
+    {
+        float d    = radius * 2;
+        var   path = new System.Drawing.Drawing2D.GraphicsPath();
+        path.AddArc(r.X,          r.Y,           d, d, 180, 90);
+        path.AddArc(r.Right - d,  r.Y,           d, d, 270, 90);
+        path.AddArc(r.Right - d,  r.Bottom - d,  d, d,   0, 90);
+        path.AddArc(r.X,          r.Bottom - d,  d, d,  90, 90);
+        path.CloseFigure();
+        return path;
     }
 }
