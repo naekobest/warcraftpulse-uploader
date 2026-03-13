@@ -70,7 +70,10 @@ public partial class SettingsForm : Form
         using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(KeyPath, writable: true);
         if (key is null) return;
         if (enable)
-            key.SetValue(AppName, Application.ExecutablePath);
+        {
+            var exePath = $"\"{Application.ExecutablePath}\"";
+            key.SetValue(AppName, exePath);
+        }
         else
             key.DeleteValue(AppName, throwOnMissingValue: false);
     }
