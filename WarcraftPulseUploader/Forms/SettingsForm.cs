@@ -21,6 +21,12 @@ public partial class SettingsForm : Form
         chkStartWithWindows.Checked = settings.StartWithWindows;
     }
 
+    private void btnShowHide_Click(object sender, EventArgs e)
+    {
+        txtApiToken.UseSystemPasswordChar = !txtApiToken.UseSystemPasswordChar;
+        btnShowHide.Text = txtApiToken.UseSystemPasswordChar ? "Show" : "Hide";
+    }
+
     private void btnBrowse_Click(object sender, EventArgs e)
     {
         using var dlg = new FolderBrowserDialog();
