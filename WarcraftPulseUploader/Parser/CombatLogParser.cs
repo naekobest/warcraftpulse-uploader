@@ -173,6 +173,19 @@ public static class CombatLogParser
             buffs, debuffs, combatantInfos, castEvents, interrupts, dispels);
     }
 
+    // Maximum allowed combat log file size (500 MB)
+    private const long MaxFileSizeBytes = 500L * 1024 * 1024;
+
+    public static CombatLogData ParseWithSizeGuard(string filePath, long maxBytes = MaxFileSizeBytes)
+    {
+        var info = new FileInfo(filePath);
+        if (!info.Exists)
+            throw new ParseException($"File not found: {filePath}");
+        if (info.Length > maxBytes)
+            throw new ParseException($"Combat log is too large to process ({info.Length / 1024 / 1024} MB). Maximum allowed: {maxBytes / 1024 / 1024} MB.");
+        return Parse(filePath);
+    }
+
     private static void ProcessEvent(
         string eventType, string[] fields, string fightId,
         DateTime ts, DateTime reportStart,

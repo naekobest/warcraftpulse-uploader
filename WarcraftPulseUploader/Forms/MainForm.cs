@@ -131,13 +131,20 @@ public partial class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        if (_settings.MinimizeToTray && e.CloseReason == CloseReason.UserClosing)
+        if (e.CloseReason == CloseReason.UserClosing)
         {
-            e.Cancel = true;
-            Hide();
-            _trayIcon.ShowBalloonTip(2000, "WarcraftPulse Uploader",
-                "Still running in the background.", ToolTipIcon.Info);
-            return;
+            var result = MessageBox.Show(
+                "Minimize to tray and keep running in the background?",
+                "WarcraftPulse Uploader",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question
+            );
+            if (result == DialogResult.Yes)
+            {
+                e.Cancel = true;
+                Hide();
+                return;
+            }
         }
         _trayIcon.Visible = false;
         base.OnFormClosing(e);
@@ -234,7 +241,7 @@ public partial class MainForm : Form
             CombatLogData data;
             try
             {
-                data = await Task.Run(() => CombatLogParser.Parse(filePath), ct);
+                data = await Task.Run(() => CombatLogParser.ParseWithSizeGuard(filePath), ct);
             }
             catch (ParseException ex)
             {

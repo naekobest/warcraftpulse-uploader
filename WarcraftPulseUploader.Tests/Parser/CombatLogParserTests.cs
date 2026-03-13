@@ -87,4 +87,20 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
         }
         finally { File.Delete(path); }
     }
+
+    [Fact]
+    public void Parse_ThrowsParseException_WhenFileExceedsMaxSize()
+    {
+        var path = Path.GetTempFileName();
+        try
+        {
+            var ex = Assert.Throws<ParseException>(() =>
+                CombatLogParser.ParseWithSizeGuard(path, maxBytes: 0));
+            Assert.Contains("too large", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
 }
