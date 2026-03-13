@@ -1,4 +1,5 @@
 // Forms/MainForm.cs
+using WarcraftPulseUploader.Native;
 using WarcraftPulseUploader.Parser;
 using WarcraftPulseUploader.Services;
 
@@ -50,15 +51,46 @@ public partial class MainForm : Form
         Text = $"WarcraftPulse Uploader v{version?.Major}.{version?.Minor}.{version?.Build}";
     }
 
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        DarkMode.Apply(Handle);
+    }
+
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
+
+        // Blue accent stripe at top + bottom separator on stats strip
+        pnlStats.Paint += (_, pe) =>
+        {
+            pe.Graphics.FillRectangle(new System.Drawing.SolidBrush(ClrBlue), 0, 0, pnlStats.Width, 2);
+            pe.Graphics.FillRectangle(new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35)),
+                0, pnlStats.Height - 1, pnlStats.Width, 1);
+        };
+        // Top separator on footer
+        pnlFooter.Paint += (_, pe) =>
+            pe.Graphics.FillRectangle(new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35)),
+                0, 0, pnlFooter.Width, 1);
+
+        // Button hover states
+        WireHover(btnUpload,   ClrBlue, System.Drawing.Color.FromArgb(0x60, 0x78, 0xf8));
+        WireHover(btnOnboard,  ClrBlue, System.Drawing.Color.FromArgb(0x60, 0x78, 0xf8));
+        WireHover(btnSettings, System.Drawing.Color.FromArgb(0x1e, 0x1e, 0x2e),
+                               System.Drawing.Color.FromArgb(0x25, 0x25, 0x40));
+
         StartWatcher();
         UpdateOnboardingBanner();
         RefreshHistory();
 
         if (_settings.StartWithWindows)
             SettingsForm.ApplyStartWithWindows(true);
+    }
+
+    private static void WireHover(Button btn, System.Drawing.Color normal, System.Drawing.Color hover)
+    {
+        btn.MouseEnter += (_, _) => btn.BackColor = hover;
+        btn.MouseLeave += (_, _) => btn.BackColor = normal;
     }
 
     private ContextMenuStrip BuildTrayMenu()

@@ -1,5 +1,6 @@
 // Forms/SettingsForm.cs
 using System.Net.Http.Json;
+using WarcraftPulseUploader.Native;
 using WarcraftPulseUploader.Services;
 
 namespace WarcraftPulseUploader.Forms;
@@ -7,6 +8,12 @@ namespace WarcraftPulseUploader.Forms;
 public partial class SettingsForm : Form
 {
     private readonly AppSettings _settings;
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        DarkMode.Apply(Handle);
+    }
 
     public SettingsForm(AppSettings settings)
     {

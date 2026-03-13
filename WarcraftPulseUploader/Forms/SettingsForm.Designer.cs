@@ -134,7 +134,7 @@ partial class SettingsForm
         txtLogDir.Location   = new System.Drawing.Point(x, y);
         txtLogDir.Size       = new System.Drawing.Size(298, 23);
 
-        var btnBrowse = new System.Windows.Forms.Button();
+        btnBrowse = new System.Windows.Forms.Button();
         btnBrowse.Text      = "Browse…";
         btnBrowse.ForeColor = clrSecond;
         btnBrowse.BackColor = bgCard;
@@ -173,7 +173,7 @@ partial class SettingsForm
 
         // ── Footer ───────────────────────────────────────────────────────
         y += 40;
-        var pnlFooter = new System.Windows.Forms.Panel();
+        pnlFooter = new System.Windows.Forms.Panel();
         pnlFooter.BackColor = bgDark;
         pnlFooter.Location  = new System.Drawing.Point(0, y);
         pnlFooter.Size      = new System.Drawing.Size(420, 42);
@@ -186,7 +186,7 @@ partial class SettingsForm
         lblVersion.Location  = new System.Drawing.Point(10, 12);
         lblVersion.Size      = new System.Drawing.Size(80, 18);
 
-        var btnCancel = new System.Windows.Forms.Button();
+        btnCancel = new System.Windows.Forms.Button();
         btnCancel.Text         = "Cancel";
         btnCancel.ForeColor    = clrSecond;
         btnCancel.BackColor    = bgCard;
@@ -198,7 +198,7 @@ partial class SettingsForm
         btnCancel.Size         = new System.Drawing.Size(80, 26);
         btnCancel.Cursor       = System.Windows.Forms.Cursors.Hand;
 
-        var btnSave = new System.Windows.Forms.Button();
+        btnSave = new System.Windows.Forms.Button();
         btnSave.Text      = "Save";
         btnSave.ForeColor = clrPrimary;
         btnSave.BackColor = clrBlue;
@@ -210,6 +210,25 @@ partial class SettingsForm
         btnSave.Click    += btnSave_Click;
 
         pnlFooter.Controls.AddRange(new System.Windows.Forms.Control[] { lblVersion, btnCancel, btnSave });
+
+        // Button hover states
+        static void WireHover(System.Windows.Forms.Button b, System.Drawing.Color normal, System.Drawing.Color hover)
+        {
+            b.MouseEnter += (_, _) => b.BackColor = hover;
+            b.MouseLeave += (_, _) => b.BackColor = normal;
+        }
+        var blueHover = System.Drawing.Color.FromArgb(0x60, 0x78, 0xf8);
+        var cardNormal = bgCard;
+        var cardHover  = System.Drawing.Color.FromArgb(0x25, 0x25, 0x40);
+        WireHover(btnShowHide,   cardNormal, cardHover);
+        WireHover(btnTestToken,  clrBlue,    blueHover);
+        WireHover(btnBrowse,     cardNormal, cardHover);
+        WireHover(btnCancel,     cardNormal, cardHover);
+        WireHover(btnSave,       clrBlue,    blueHover);
+
+        // Blue accent stripe at top of footer panel
+        pnlFooter.Paint += (_, e) =>
+            e.Graphics.FillRectangle(new System.Drawing.SolidBrush(clrBorder), 0, 0, pnlFooter.Width, 1);
 
         Controls.AddRange(new System.Windows.Forms.Control[] {
             lblApiToken, lblTokenHint,
@@ -233,4 +252,8 @@ partial class SettingsForm
     private System.Windows.Forms.CheckBox chkAutoUpload       = null!;
     private System.Windows.Forms.CheckBox chkMinimizeToTray   = null!;
     private System.Windows.Forms.CheckBox chkStartWithWindows = null!;
+    private System.Windows.Forms.Button   btnBrowse           = null!;
+    private System.Windows.Forms.Button   btnCancel           = null!;
+    private System.Windows.Forms.Button   btnSave             = null!;
+    private System.Windows.Forms.Panel    pnlFooter           = null!;
 }
