@@ -207,6 +207,11 @@ public partial class MainForm : Form
             SetStatus("Upload cancelled.");
             btnUpload.Enabled = true;
         }
+        catch (Exception ex)
+        {
+            SetStatus($"Error: {ex.Message}");
+            btnUpload.Enabled = true;
+        }
     }
 
     private void btnOpenReport_Click(object sender, EventArgs e)

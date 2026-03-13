@@ -12,7 +12,7 @@ public sealed class LogWatcher : IDisposable
     {
         _watcher = new FileSystemWatcher(directory, "WoWCombatLog*.txt")
         {
-            NotifyFilter        = NotifyFilters.FileName | NotifyFilters.LastWrite,
+            NotifyFilter        = NotifyFilters.FileName,
             EnableRaisingEvents = false,
         };
         _watcher.Created += (_, e) => NewLogDetected?.Invoke(this, e.FullPath);

@@ -3,61 +3,54 @@ using Xunit;
 
 namespace WarcraftPulseUploader.Tests.Parser;
 
-public class CombatLogParserTests
+/// <summary>Parses sample.txt once and shares the result across all sample-based tests.</summary>
+public sealed class SampleFixture
 {
-    private static string FixturePath(string name) =>
-        Path.Combine(AppContext.BaseDirectory, "Parser", "Fixtures", name);
+    public CombatLogData Data { get; } = CombatLogParser.Parse(
+        Path.Combine(AppContext.BaseDirectory, "Parser", "Fixtures", "sample.txt"));
+}
+
+public class CombatLogParserTests : IClassFixture<SampleFixture>
+{
+    private readonly CombatLogData _data;
+
+    public CombatLogParserTests(SampleFixture fixture) => _data = fixture.Data;
 
     [Fact]
-    public void Parse_Sample_ReturnsOneFight()
-    {
-        var data = CombatLogParser.Parse(FixturePath("sample.txt"));
-        Assert.Single(data.Fights);
-    }
+    public void Parse_Sample_ReturnsOneFight() =>
+        Assert.Single(_data.Fights);
 
     [Fact]
-    public void Parse_Sample_FightIsKill()
-    {
-        var data = CombatLogParser.Parse(FixturePath("sample.txt"));
-        Assert.True(data.Fights[0].Kill);
-    }
+    public void Parse_Sample_FightIsKill() =>
+        Assert.True(_data.Fights[0].Kill);
 
     [Fact]
-    public void Parse_Sample_ZoneNameCorrect()
-    {
-        var data = CombatLogParser.Parse(FixturePath("sample.txt"));
-        Assert.Equal("Molten Core", data.ZoneName);
-    }
+    public void Parse_Sample_ZoneNameCorrect() =>
+        Assert.Equal("Molten Core", _data.ZoneName);
 
     [Fact]
-    public void Parse_Sample_GameVersionIsClassicEra()
-    {
-        var data = CombatLogParser.Parse(FixturePath("sample.txt"));
-        Assert.Equal("classic_era", data.GameVersion);
-    }
+    public void Parse_Sample_GameVersionIsClassicEra() =>
+        Assert.Equal("classic_era", _data.GameVersion);
 
     [Fact]
     public void Parse_Sample_DetectsOnePlayer()
     {
-        var data = CombatLogParser.Parse(FixturePath("sample.txt"));
-        int total = data.Players.Dps.Count + data.Players.Healers.Count + data.Players.Tanks.Count;
+        int total = _data.Players.Dps.Count + _data.Players.Healers.Count + _data.Players.Tanks.Count;
         Assert.Equal(1, total);
     }
 
     [Fact]
     public void Parse_Sample_DamageDonePopulated()
     {
-        var data = CombatLogParser.Parse(FixturePath("sample.txt"));
-        Assert.True(data.DamageDone.ContainsKey("1"));
-        Assert.NotEmpty(data.DamageDone["1"].Entries);
+        Assert.True(_data.DamageDone.ContainsKey("1"));
+        Assert.NotEmpty(_data.DamageDone["1"].Entries);
     }
 
     [Fact]
     public void Parse_Sample_HealingPopulated()
     {
-        var data = CombatLogParser.Parse(FixturePath("sample.txt"));
-        Assert.True(data.Healing.ContainsKey("1"));
-        Assert.NotEmpty(data.Healing["1"].Entries);
+        Assert.True(_data.Healing.ContainsKey("1"));
+        Assert.NotEmpty(_data.Healing["1"].Entries);
     }
 
     [Fact]

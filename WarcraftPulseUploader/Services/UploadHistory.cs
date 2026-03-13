@@ -51,14 +51,15 @@ public sealed class UploadHistory
         _entries.Insert(0, entry);
         if (_entries.Count > MaxEntries)
             _entries = _entries[..MaxEntries];
-        Save();
+        try { Save(); } catch (Exception) { /* non-critical — in-memory history is still updated */ }
     }
+
+    private static readonly JsonSerializerOptions WriteIndented = new() { WriteIndented = true };
 
     private void Save()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(HistoryPath)!);
-        File.WriteAllText(HistoryPath, JsonSerializer.Serialize(_entries,
-            new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(HistoryPath, JsonSerializer.Serialize(_entries, WriteIndented));
     }
 
     public static string HashFile(string path)

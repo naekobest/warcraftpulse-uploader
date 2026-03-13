@@ -74,9 +74,11 @@ public sealed class AppSettings
         return settings;
     }
 
+    private static readonly JsonSerializerOptions WriteIndented = new() { WriteIndented = true };
+
     public void Save()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
-        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(this, WriteIndented));
     }
 }
