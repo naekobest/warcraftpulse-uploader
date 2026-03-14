@@ -80,6 +80,8 @@ public static class CombatLogParser
         var playerMeta = new Dictionary<int, PlayerMeta>();
         var firstSpell = new Dictionary<int, int>();
 
+        int parseYear = DateTime.Now.Year;
+
         string? line;
         while ((line = reader.ReadLine()) is not null)
         {
@@ -88,7 +90,7 @@ public static class CombatLogParser
             int sep = line.IndexOf("  ");
             if (sep < 0) continue;
 
-            if (!TryParseTimestamp(line.AsSpan(0, sep), out DateTime ts)) continue;
+            if (!TryParseTimestamp(line.AsSpan(0, sep), parseYear, out DateTime ts)) continue;
 
             reportStart ??= ts;
             reportEnd     = ts;
@@ -486,7 +488,7 @@ public static class CombatLogParser
         dict[key] = dict.GetValueOrDefault(key) + amount;
     }
 
-    private static bool TryParseTimestamp(ReadOnlySpan<char> s, out DateTime result)
+    private static bool TryParseTimestamp(ReadOnlySpan<char> s, int year, out DateTime result)
     {
         result = default;
         // Format: M/d H:mm:ss.fff
@@ -501,22 +503,22 @@ public static class CombatLogParser
         var time = s[(space + 1)..];
         int c1 = time.IndexOf(':');
         if (c1 <= 0) return false;
-        if (!int.TryParse(time[..c1], out int hour) || hour > 23) return false;
+        if (!int.TryParse(time[..c1], out int hour) || hour is < 0 or > 23) return false;
 
         int c2Rel = time[(c1 + 1)..].IndexOf(':');
         if (c2Rel < 0) return false;
         int c2 = c1 + 1 + c2Rel;
-        if (!int.TryParse(time[(c1 + 1)..c2], out int minute) || minute > 59) return false;
+        if (!int.TryParse(time[(c1 + 1)..c2], out int minute) || minute is < 0 or > 59) return false;
 
         int dotRel = time[(c2 + 1)..].IndexOf('.');
         if (dotRel < 0) return false;
         int dot = c2 + 1 + dotRel;
-        if (!int.TryParse(time[(c2 + 1)..dot], out int second) || second > 59) return false;
-        if (!int.TryParse(time[(dot + 1)..], out int ms) || ms > 999) return false;
+        if (!int.TryParse(time[(c2 + 1)..dot], out int second) || second is < 0 or > 59) return false;
+        if (!int.TryParse(time[(dot + 1)..], out int ms) || ms is < 0 or > 999) return false;
 
         try
         {
-            result = new DateTime(DateTime.Now.Year, month, day, hour, minute, second, ms,
+            result = new DateTime(year, month, day, hour, minute, second, ms,
                 DateTimeKind.Unspecified);
             return true;
         }
