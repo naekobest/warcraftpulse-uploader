@@ -10,7 +10,7 @@ public static class CombatLogParser
 
     private const uint PlayerFlag = 0x00000400;
 
-    public static CombatLogData Parse(string filePath)
+    internal static CombatLogData Parse(string filePath)
     {
         using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8,
             detectEncodingFromByteOrderMarks: true, bufferSize: 65536);
@@ -19,6 +19,10 @@ public static class CombatLogParser
 
     public static (CombatLogData data, string hash) ParseWithHash(string filePath)
     {
+        var info = new FileInfo(filePath);
+        if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            throw new ParseException("Symlinks and junctions are not supported as combat log paths.");
+
         using var fileStream   = new FileStream(filePath, FileMode.Open, FileAccess.Read,
                                      FileShare.ReadWrite, bufferSize: 65536);
         using var sha          = System.Security.Cryptography.SHA256.Create();
@@ -80,6 +84,14 @@ public static class CombatLogParser
         var playerMeta = new Dictionary<int, PlayerMeta>();
         var firstSpell = new Dictionary<int, int>();
 
+        // Year is not in the log timestamp — use current year. Edge case: logs spanning
+        // Dec 31 → Jan 1 will have wrong year for the January portion if parsed after midnight.
+        int parseYear = DateTime.Now.Year;
+
+        const int MaxCsvFields = 40; // COMBATANT_INFO accesses up to index 26; 40 gives headroom
+        var fieldsBuffer = System.Buffers.ArrayPool<string>.Shared.Rent(MaxCsvFields);
+        try
+        {
         string? line;
         while ((line = reader.ReadLine()) is not null)
         {
@@ -88,33 +100,33 @@ public static class CombatLogParser
             int sep = line.IndexOf("  ");
             if (sep < 0) continue;
 
-            if (!TryParseTimestamp(line.AsSpan(0, sep), out DateTime ts)) continue;
+            if (!TryParseTimestamp(line.AsSpan(0, sep), parseYear, out DateTime ts)) continue;
 
             reportStart ??= ts;
             reportEnd     = ts;
 
-            var fields = SplitCsvLine(line.AsSpan(sep + 2));
-            if (fields.Length == 0) continue;
-            string eventType = fields[0];
+            int fieldCount = SplitCsvLine(line.AsSpan(sep + 2), fieldsBuffer);
+            if (fieldCount == 0) continue;
+            string eventType = fieldsBuffer[0];
 
             switch (eventType)
             {
                 case "ZONE_CHANGE":
-                    if (fields.Length >= 3)
+                    if (fieldCount >= 3)
                     {
-                        zoneId   = int.TryParse(fields[1], out int zid) ? zid : zoneId;
-                        zoneName = fields[2];
+                        zoneId   = int.TryParse(fieldsBuffer[1], out int zid) ? zid : zoneId;
+                        zoneName = fieldsBuffer[2];
                     }
                     break;
 
                 case "ENCOUNTER_START":
-                    if (fields.Length >= 5)
+                    if (fieldCount >= 5)
                     {
                         fightSeq++;
                         openFightId      = fightSeq;
-                        openEncounterId  = int.TryParse(fields[1], out int eid) ? eid : 0;
-                        openFightName    = fields[2];
-                        openDifficulty   = int.TryParse(fields[3], out int diff) ? diff : 0;
+                        openEncounterId  = int.TryParse(fieldsBuffer[1], out int eid) ? eid : 0;
+                        openFightName    = fieldsBuffer[2];
+                        openDifficulty   = int.TryParse(fieldsBuffer[3], out int diff) ? diff : 0;
                         openFightStart   = ts;
 
                         damageDone [fightSeq] = new();
@@ -131,11 +143,17 @@ public static class CombatLogParser
                     break;
 
                 case "ENCOUNTER_END":
-                    if (openFightId is int fightId && fields.Length >= 6)
+                    if (openFightId is int fightId && fieldCount >= 6)
                     {
-                        bool kill = fields[5].Trim() == "1";
+                        bool kill = fieldsBuffer[5].Trim() == "1";
                         long startMs = (long)(openFightStart - reportStart!.Value).TotalMilliseconds;
                         long endMs   = (long)(ts - reportStart.Value).TotalMilliseconds;
+
+                        // Close any aura bands still open at encounter end (SPELL_AURA_REMOVED never fired)
+                        foreach (var tracker in buffs[fightId].Values)
+                            tracker.CloseBand(endMs);
+                        foreach (var tracker in debuffs[fightId].Values)
+                            tracker.CloseBand(endMs);
 
                         fights.Add(new FightData
                         {
@@ -152,19 +170,19 @@ public static class CombatLogParser
                     break;
 
                 case "COMBATANT_INFO":
-                    if (openFightId is int cfFightId && fields.Length >= 3)
+                    if (openFightId is int cfFightId && fieldCount >= 3)
                     {
-                        string guid    = fields[1];
+                        string guid    = fieldsBuffer[1];
                         int    actorId = GetOrAdd(actorMap, guid, ref nextActorId);
                         if (!playerMeta.ContainsKey(actorId))
                         {
-                            string pName = fields[2];
+                            string pName = fieldsBuffer[2];
                             var parts = pName.Split('-', 2);
                             playerMeta[actorId] = new PlayerMeta { Name = parts[0], Realm = parts.Length > 1 ? parts[1] : "" };
                         }
-                        int t1 = fields.Length > 24 ? ParseInt(fields[24]) : 0;
-                        int t2 = fields.Length > 25 ? ParseInt(fields[25]) : 0;
-                        int t3 = fields.Length > 26 ? ParseInt(fields[26]) : 0;
+                        int t1 = fieldCount > 24 ? ParseInt(fieldsBuffer[24]) : 0;
+                        int t2 = fieldCount > 25 ? ParseInt(fieldsBuffer[25]) : 0;
+                        int t3 = fieldCount > 26 ? ParseInt(fieldsBuffer[26]) : 0;
 
                         DetectClassFromTalents(actorId, t1, t2, t3, playerMeta);
 
@@ -178,12 +196,17 @@ public static class CombatLogParser
 
                 default:
                     if (openFightId is int activeFight)
-                        ProcessEvent(eventType, fields, activeFight, ts, reportStart!.Value,
+                        ProcessEvent(eventType, fieldsBuffer, fieldCount, activeFight, ts, reportStart!.Value,
                             actorMap, ref nextActorId, playerMeta, firstSpell,
                             damageDone, damageTaken, healingDone,
                             deaths, buffs, debuffs, castEvents, interrupts, dispels);
                     break;
             }
+        }
+        }
+        finally
+        {
+            System.Buffers.ArrayPool<string>.Shared.Return(fieldsBuffer, clearArray: true);
         }
 
         if (fights.Count == 0)
@@ -210,7 +233,7 @@ public static class CombatLogParser
     }
 
     private static void ProcessEvent(
-        string eventType, string[] fields, int fightId,
+        string eventType, string[] fields, int fieldCount, int fightId,
         DateTime ts, DateTime reportStart,
         Dictionary<string, int> actorMap, ref int nextActorId,
         Dictionary<int, PlayerMeta> playerMeta,
@@ -225,7 +248,7 @@ public static class CombatLogParser
         Dictionary<int, List<RawEvent>> interrupts,
         Dictionary<int, List<RawEvent>> dispels)
     {
-        if (fields.Length < 9) return;
+        if (fieldCount < 9) return;
 
         string srcGuid    = fields[1];
         string srcName    = fields[2];
@@ -253,8 +276,8 @@ public static class CombatLogParser
             case "SWING_DAMAGE":
             case "RANGE_DAMAGE":
                 long dmgAmount = eventType == "SWING_DAMAGE"
-                    ? (fields.Length > 9 ? ParseLong(fields[9]) : 0)
-                    : (fields.Length > 12 ? ParseLong(fields[12]) : 0);
+                    ? (fieldCount > 9 ? ParseLong(fields[9]) : 0)
+                    : (fieldCount > 12 ? ParseLong(fields[12]) : 0);
 
                 if (srcIsPlayer && srcId > 0)
                     AddTo(damageDone[fightId], srcId, dmgAmount);
@@ -265,7 +288,7 @@ public static class CombatLogParser
 
             case "SPELL_HEAL":
             case "SPELL_PERIODIC_HEAL":
-                if (srcIsPlayer && srcId > 0 && fields.Length > 12)
+                if (srcIsPlayer && srcId > 0 && fieldCount > 12)
                     AddTo(healingDone[fightId], srcId, ParseLong(fields[12]));
                 break;
 
@@ -277,7 +300,7 @@ public static class CombatLogParser
             case "SPELL_AURA_APPLIED":
             case "SPELL_AURA_REMOVED":
             {
-                if (fields.Length < 13) break;
+                if (fieldCount < 13) break;
                 int    spellId   = ParseInt(fields[9]);
                 string spellName = fields[10];
                 bool   isBuff    = fields[12].Trim() == "BUFF";
@@ -303,7 +326,7 @@ public static class CombatLogParser
             }
 
             case "SPELL_CAST_SUCCESS":
-                if (srcIsPlayer && srcId > 0 && fields.Length > 9)
+                if (srcIsPlayer && srcId > 0 && fieldCount > 9)
                 {
                     int spellId = ParseInt(fields[9]);
                     // Always track first spell for class detection, even after the cast list is full.
@@ -315,12 +338,12 @@ public static class CombatLogParser
 
             case "SPELL_INTERRUPT":
                 if (srcIsPlayer && srcId > 0 && interrupts[fightId].Count < ParseLimits.MaxInterruptsPerFight)
-                    interrupts[fightId].Add(new RawEvent { SourceId = srcId, TargetId = tgtId, SpellId = ParseInt(fields.Length > 9 ? fields[9] : "0"), Timestamp = tsMs });
+                    interrupts[fightId].Add(new RawEvent { SourceId = srcId, TargetId = tgtId, SpellId = ParseInt(fieldCount > 9 ? fields[9] : "0"), Timestamp = tsMs });
                 break;
 
             case "SPELL_DISPEL":
                 if (srcIsPlayer && srcId > 0 && dispels[fightId].Count < ParseLimits.MaxDispelsPerFight)
-                    dispels[fightId].Add(new RawEvent { SourceId = srcId, TargetId = tgtId, SpellId = ParseInt(fields.Length > 9 ? fields[9] : "0"), Timestamp = tsMs });
+                    dispels[fightId].Add(new RawEvent { SourceId = srcId, TargetId = tgtId, SpellId = ParseInt(fieldCount > 9 ? fields[9] : "0"), Timestamp = tsMs });
                 break;
         }
     }
@@ -354,13 +377,8 @@ public static class CombatLogParser
             };
         }
 
-        var deathsOut = new Dictionary<string, List<DeathEvent>>(deaths.Count);
-        foreach (var (fightId, list) in deaths)
-            deathsOut[fightId.ToString()] = list;
-
-        var combatantInfosOut = new Dictionary<string, List<CombatantInfoEvent>>(combatantInfos.Count);
-        foreach (var (fightId, list) in combatantInfos)
-            combatantInfosOut[fightId.ToString()] = list;
+        var deathsOut         = ToStringKeys(deaths);
+        var combatantInfosOut = ToStringKeys(combatantInfos);
 
         return new CombatLogData
         {
@@ -381,6 +399,14 @@ public static class CombatLogParser
             Events           = events,
             ReportWideEvents = [],
         };
+    }
+
+    private static Dictionary<string, TValue> ToStringKeys<TValue>(Dictionary<int, TValue> source)
+    {
+        var result = new Dictionary<string, TValue>(source.Count);
+        foreach (var (k, v) in source)
+            result[k.ToString()] = v;
+        return result;
     }
 
     private static Dictionary<string, EntriesWrapper> ToEntriesWrappers(
@@ -486,7 +512,7 @@ public static class CombatLogParser
         dict[key] = dict.GetValueOrDefault(key) + amount;
     }
 
-    private static bool TryParseTimestamp(ReadOnlySpan<char> s, out DateTime result)
+    internal static bool TryParseTimestamp(ReadOnlySpan<char> s, int year, out DateTime result)
     {
         result = default;
         // Format: M/d H:mm:ss.fff
@@ -501,33 +527,33 @@ public static class CombatLogParser
         var time = s[(space + 1)..];
         int c1 = time.IndexOf(':');
         if (c1 <= 0) return false;
-        if (!int.TryParse(time[..c1], out int hour) || hour > 23) return false;
+        if (!int.TryParse(time[..c1], out int hour) || hour is < 0 or > 23) return false;
 
         int c2Rel = time[(c1 + 1)..].IndexOf(':');
         if (c2Rel < 0) return false;
         int c2 = c1 + 1 + c2Rel;
-        if (!int.TryParse(time[(c1 + 1)..c2], out int minute) || minute > 59) return false;
+        if (!int.TryParse(time[(c1 + 1)..c2], out int minute) || minute is < 0 or > 59) return false;
 
         int dotRel = time[(c2 + 1)..].IndexOf('.');
         if (dotRel < 0) return false;
         int dot = c2 + 1 + dotRel;
-        if (!int.TryParse(time[(c2 + 1)..dot], out int second) || second > 59) return false;
-        if (!int.TryParse(time[(dot + 1)..], out int ms) || ms > 999) return false;
+        if (!int.TryParse(time[(c2 + 1)..dot], out int second) || second is < 0 or > 59) return false;
+        if (!int.TryParse(time[(dot + 1)..], out int ms) || ms is < 0 or > 999) return false;
 
         try
         {
-            result = new DateTime(DateTime.Now.Year, month, day, hour, minute, second, ms,
+            result = new DateTime(year, month, day, hour, minute, second, ms,
                 DateTimeKind.Unspecified);
             return true;
         }
         catch (ArgumentOutOfRangeException) { return false; }
     }
 
-    private static string[] SplitCsvLine(ReadOnlySpan<char> line)
+    private static int SplitCsvLine(ReadOnlySpan<char> line, string[] buffer)
     {
-        var fields = new List<string>(16);
+        int  count   = 0;
         bool inQuote = false;
-        int start = 0;
+        int  start   = 0;
 
         for (int i = 0; i < line.Length; i++)
         {
@@ -535,12 +561,16 @@ public static class CombatLogParser
             if (c == '"') { inQuote = !inQuote; }
             else if (c == ',' && !inQuote)
             {
-                fields.Add(ExtractUnquoted(line[start..i]));
+                if (count < buffer.Length)
+                    buffer[count++] = ExtractUnquoted(line[start..i]);
                 start = i + 1;
             }
         }
-        fields.Add(ExtractUnquoted(line[start..]));
-        return fields.ToArray();
+        if (count < buffer.Length)
+            buffer[count++] = ExtractUnquoted(line[start..]);
+        System.Diagnostics.Debug.Assert(count <= buffer.Length,
+            $"CSV field count {count} exceeded buffer size {buffer.Length} — increase MaxCsvFields.");
+        return count;
     }
 
     private static string ExtractUnquoted(ReadOnlySpan<char> field)

@@ -121,6 +121,37 @@ public sealed class UploadService : IDisposable
         return UploadResult.Fail($"Server error {(int)resp.StatusCode}.");
     }
 
+    // On success: (true, username). On failure: (false, human-readable error). Cancellation propagates.
+    public async Task<(bool Success, string Message)> TestTokenAsync(
+        string apiToken,
+        CancellationToken ct = default)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, "api/user");
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiToken);
+
+        try
+        {
+            using var response = await _http.SendAsync(request, ct);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadFromJsonAsync<JsonElement>(cancellationToken: ct);
+                string name = json.TryGetProperty("name", out var n) ? n.GetString() ?? "?" : "?";
+                return (true, name);
+            }
+            return (false, $"Token rejected (HTTP {(int)response.StatusCode})");
+        }
+        catch (TaskCanceledException) { throw; }
+        catch (HttpRequestException ex)
+        {
+            return (false, $"Could not reach server: {ex.Message}");
+        }
+        catch (JsonException)
+        {
+            return (false, "Server returned unexpected response.");
+        }
+    }
+
     public void Dispose() => _http.Dispose();
 }
 
