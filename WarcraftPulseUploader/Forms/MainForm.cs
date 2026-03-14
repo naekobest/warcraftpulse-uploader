@@ -86,7 +86,6 @@ public partial class MainForm : Form
         var cardHover = System.Drawing.Color.FromArgb(0x25, 0x25, 0x40);
         var cardNormal = System.Drawing.Color.FromArgb(0x1e, 0x1e, 0x2e);
         WireHover(btnSettings, cardNormal, cardHover);
-        WireHover(btnHistory,  cardNormal, cardHover);
 
         StartWatcher();
         UpdateOnboardingBanner();
@@ -431,7 +430,10 @@ public partial class MainForm : Form
     {
         lvHistory.Items.Clear();
         int count = _history.Entries.Count;
-        lblUploads.Text = count.ToString();
+        lblUploads.Text    = count.ToString();
+        lblLastUpload.Text = count > 0
+            ? $"Last: {_history.Entries[^1].ZoneName} · {FormatAgo(_history.Entries[^1].UploadedAt)}"
+            : "";
 
         if (count == 0)
         {
@@ -455,17 +457,12 @@ public partial class MainForm : Form
         }
     }
 
-    private void btnHistory_Click(object sender, EventArgs e)
+    private static string FormatAgo(DateTime utc)
     {
-        if (_history.Entries.Count == 0)
-        {
-            MessageBox.Show("No uploads yet.", "History", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            return;
-        }
-        var sb = new System.Text.StringBuilder();
-        foreach (var entry in _history.Entries)
-            sb.AppendLine($"{entry.UploadedAt.ToLocalTime():MMM dd · HH:mm}  {entry.FileName}  ({entry.PayloadKb} KB)  {entry.ReportCode}");
-        MessageBox.Show(sb.ToString(), "Upload History", MessageBoxButtons.OK, MessageBoxIcon.None);
+        var diff = DateTime.UtcNow - utc;
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours   < 24) return $"{(int)diff.TotalHours}h ago";
+        return $"{(int)diff.TotalDays}d ago";
     }
 
     private void lvHistory_DoubleClick(object sender, EventArgs e)

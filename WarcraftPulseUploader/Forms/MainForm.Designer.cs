@@ -29,6 +29,7 @@ partial class MainForm
         pnlStats         = new System.Windows.Forms.Panel();
         lblUploadsHeader = new System.Windows.Forms.Label();
         lblUploads       = new System.Windows.Forms.Label();
+        lblLastUpload    = new System.Windows.Forms.Label();
         pnlDivider       = new System.Windows.Forms.Panel();
         lblStatusHeader  = new System.Windows.Forms.Label();
         lblDot           = new System.Windows.Forms.Label();
@@ -42,7 +43,6 @@ partial class MainForm
         lblLogPath       = new System.Windows.Forms.Label();
         btnUpload        = new System.Windows.Forms.Button();
         btnSettings      = new System.Windows.Forms.Button();
-        btnHistory       = new System.Windows.Forms.Button();
         _dotTimer        = new System.Windows.Forms.Timer(components);
 
         SuspendLayout();
@@ -71,9 +71,15 @@ partial class MainForm
         lblUploads.Text      = "0";
         lblUploads.ForeColor = clrBlue;
         lblUploads.Font      = new System.Drawing.Font("Segoe UI", 18f, System.Drawing.FontStyle.Bold);
-        lblUploads.Location  = new System.Drawing.Point(10, 24);
-        lblUploads.Size      = new System.Drawing.Size(160, 32);
+        lblUploads.Location  = new System.Drawing.Point(10, 22);
+        lblUploads.Size      = new System.Drawing.Size(185, 26);
         lblUploads.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+
+        lblLastUpload.Text      = "";
+        lblLastUpload.ForeColor = clrMuted;
+        lblLastUpload.Font      = new System.Drawing.Font("Segoe UI", 7.5f);
+        lblLastUpload.Location  = new System.Drawing.Point(12, 50);
+        lblLastUpload.Size      = new System.Drawing.Size(185, 14);
 
         pnlDivider.BackColor = clrBorder;
         pnlDivider.Location  = new System.Drawing.Point(200, 8);
@@ -100,7 +106,7 @@ partial class MainForm
         lblStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 
         pnlStats.Controls.AddRange(new System.Windows.Forms.Control[] {
-            lblUploadsHeader, lblUploads, pnlDivider, lblStatusHeader, lblDot, lblStatus,
+            lblUploadsHeader, lblUploads, lblLastUpload, pnlDivider, lblStatusHeader, lblDot, lblStatus,
         });
 
         // ── Section label ────────────────────────────────────────────────
@@ -193,24 +199,13 @@ partial class MainForm
         btnSettings.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
         btnSettings.FlatAppearance.BorderColor = clrBorder;
         btnSettings.FlatAppearance.BorderSize  = 1;
-        btnSettings.Location  = new System.Drawing.Point(248, 24);
-        btnSettings.Size      = new System.Drawing.Size(82, 26);
+        btnSettings.Location  = new System.Drawing.Point(338, 24);
+        btnSettings.Size      = new System.Drawing.Size(90, 26);
         btnSettings.Cursor    = System.Windows.Forms.Cursors.Hand;
         btnSettings.Click    += btnSettings_Click;
 
-        btnHistory.Text      = "History";
-        btnHistory.ForeColor = clrSecond;
-        btnHistory.BackColor = bgCard;
-        btnHistory.FlatStyle = System.Windows.Forms.FlatStyle.Flat;
-        btnHistory.FlatAppearance.BorderColor = clrBorder;
-        btnHistory.FlatAppearance.BorderSize  = 1;
-        btnHistory.Location  = new System.Drawing.Point(338, 24);
-        btnHistory.Size      = new System.Drawing.Size(90, 26);
-        btnHistory.Cursor    = System.Windows.Forms.Cursors.Hand;
-        btnHistory.Click    += btnHistory_Click;
-
         pnlFooter.Controls.AddRange(new System.Windows.Forms.Control[] {
-            lblLogPath, btnUpload, btnSettings, btnHistory,
+            lblLogPath, btnUpload, btnSettings,
         });
 
         // ── Dot animation timer ──────────────────────────────────────────
@@ -232,6 +227,7 @@ partial class MainForm
     private System.Windows.Forms.Label    lblStatusHeader  = null!;
     private System.Windows.Forms.Label    lblDot           = null!;
     private System.Windows.Forms.Label    lblStatus        = null!;
+    private System.Windows.Forms.Label    lblLastUpload    = null!;
     private System.Windows.Forms.Label    lblSectionHeader = null!;
     private System.Windows.Forms.Panel    pnlOnboard       = null!;
     private System.Windows.Forms.Label    lblOnboard       = null!;
@@ -241,6 +237,5 @@ partial class MainForm
     private System.Windows.Forms.Label    lblLogPath       = null!;
     private System.Windows.Forms.Button   btnUpload        = null!;
     private System.Windows.Forms.Button   btnSettings      = null!;
-    private System.Windows.Forms.Button   btnHistory       = null!;
     private System.Windows.Forms.Timer    _dotTimer        = null!;
 }
