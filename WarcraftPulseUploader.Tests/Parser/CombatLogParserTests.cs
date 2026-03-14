@@ -152,4 +152,32 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
             File.Delete(path);
         }
     }
+
+    [Fact]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public void ParseWithSizeGuard_ThrowsParseException_WhenPathIsSymlink()
+    {
+        var target = Path.GetTempFileName();
+        var link   = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".txt");
+        try
+        {
+            File.WriteAllText(target, "dummy content");
+            try
+            {
+                File.CreateSymbolicLink(link, target);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return; // skip — no symlink privilege on this machine
+            }
+
+            var ex = Assert.Throws<ParseException>(() => CombatLogParser.ParseWithSizeGuard(link));
+            Assert.Contains("symlink", ex.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            if (File.Exists(link))   File.Delete(link);
+            if (File.Exists(target)) File.Delete(target);
+        }
+    }
 }

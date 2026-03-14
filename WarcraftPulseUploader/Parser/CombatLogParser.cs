@@ -181,6 +181,8 @@ public static class CombatLogParser
         var info = new FileInfo(filePath);
         if (!info.Exists)
             throw new ParseException($"File not found: {filePath}");
+        if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            throw new ParseException("Symlinks and junctions are not supported as combat log paths.");
         if (info.Length > maxBytes)
             throw new ParseException($"Combat log is too large to process ({info.Length / 1024 / 1024} MB). Maximum allowed: {maxBytes / 1024 / 1024} MB.");
         return Parse(filePath);
