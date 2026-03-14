@@ -154,6 +154,28 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
     }
 
     [Fact]
+    public void Parse_DeathsCappedAtLimit()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("COMBAT_LOG_VERSION,9,ADVANCED_LOG_ENABLED,1,BUILD_VERSION,1.15.8,PROJECT_ID,2");
+        sb.AppendLine("1/1 0:00:00.000  ZONE_CHANGE,1234,Molten Core,null");
+        sb.AppendLine("1/1 0:00:01.000  ENCOUNTER_START,703,Ragnaros,9,40");
+        for (int i = 0; i < 1100; i++)
+            sb.AppendLine($"1/1 0:00:02.000  UNIT_DIED,0x0000000000000000,nil,0x80000000,0x00000400,Player-1-{i:D4},Player{i}-Realm,0x00000512,0x00000000");
+        sb.AppendLine("1/1 0:00:03.000  ENCOUNTER_END,703,Ragnaros,9,40,1");
+
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, sb.ToString());
+            var data = CombatLogParser.ParseWithSizeGuard(path);
+            Assert.True(data.Deaths.ContainsKey("1"));
+            Assert.True(data.Deaths["1"].Count <= WarcraftPulseUploader.Parser.ParseLimits.MaxDeathsPerFight);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public void ParseWithSizeGuard_ThrowsParseException_WhenPathIsSymlink()
     {

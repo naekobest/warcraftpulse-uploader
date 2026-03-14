@@ -249,7 +249,7 @@ public static class CombatLogParser
                 break;
 
             case "UNIT_DIED":
-                if (tgtIsPlayer && tgtId > 0)
+                if (tgtIsPlayer && tgtId > 0 && deaths[fightId].Count < ParseLimits.MaxDeathsPerFight)
                     deaths[fightId].Add(new DeathEvent { Name = tgtName.Split('-')[0], Timestamp = tsMs });
                 break;
 
@@ -270,7 +270,8 @@ public static class CombatLogParser
                         tracker = new AuraTracker { SpellId = spellId, SpellName = spellName };
                         store[spellId] = tracker;
                     }
-                    tracker.OpenBand(tsMs);
+                    if (tracker.BandCount < ParseLimits.MaxAuraBands)
+                        tracker.OpenBand(tsMs);
                 }
                 else
                 {
@@ -281,7 +282,7 @@ public static class CombatLogParser
             }
 
             case "SPELL_CAST_SUCCESS":
-                if (srcIsPlayer && srcId > 0 && fields.Length > 9)
+                if (srcIsPlayer && srcId > 0 && fields.Length > 9 && casts[fightId].Count < ParseLimits.MaxCastsPerFight)
                 {
                     int spellId = ParseInt(fields[9]);
                     firstSpell.TryAdd(srcId, spellId);
@@ -290,12 +291,12 @@ public static class CombatLogParser
                 break;
 
             case "SPELL_INTERRUPT":
-                if (srcIsPlayer && srcId > 0)
+                if (srcIsPlayer && srcId > 0 && interrupts[fightId].Count < ParseLimits.MaxInterruptsPerFight)
                     interrupts[fightId].Add(new RawEvent { SourceId = srcId, TargetId = tgtId, SpellId = ParseInt(fields.Length > 9 ? fields[9] : "0"), Timestamp = tsMs });
                 break;
 
             case "SPELL_DISPEL":
-                if (srcIsPlayer && srcId > 0)
+                if (srcIsPlayer && srcId > 0 && dispels[fightId].Count < ParseLimits.MaxDispelsPerFight)
                     dispels[fightId].Add(new RawEvent { SourceId = srcId, TargetId = tgtId, SpellId = ParseInt(fields.Length > 9 ? fields[9] : "0"), Timestamp = tsMs });
                 break;
         }
@@ -506,6 +507,16 @@ public static class CombatLogParser
     private static long ParseLong(string s) => long.TryParse(s, out long v) ? v : 0;
 }
 
+/// <summary>Hard caps on per-fight collection sizes to bound memory and upload payload.</summary>
+public static class ParseLimits
+{
+    public const int MaxDeathsPerFight     = 1000;
+    public const int MaxCastsPerFight      = 50_000;
+    public const int MaxInterruptsPerFight = 5_000;
+    public const int MaxDispelsPerFight    = 5_000;
+    public const int MaxAuraBands          = 10_000;
+}
+
 /// <summary>In-memory player metadata accumulated while parsing; not serialized.</summary>
 internal sealed class PlayerMeta
 {
@@ -524,6 +535,8 @@ internal sealed class AuraTracker
 
     private long _openBandStart = -1;
     private readonly List<AuraBand> _bands = [];
+
+    public int BandCount => _bands.Count;
 
     public void OpenBand(long tsMs)
     {
