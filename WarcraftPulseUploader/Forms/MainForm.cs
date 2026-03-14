@@ -157,6 +157,7 @@ public partial class MainForm : Form
     {
         _watcher?.Dispose();
         _uploader?.Dispose();
+        _uploader = null;
 
         lblLogPath.Text = string.IsNullOrEmpty(_settings.WowLogDirectory)
             ? "No log directory configured"
@@ -336,7 +337,8 @@ public partial class MainForm : Form
 
     private void btnSettings_Click(object sender, EventArgs e)
     {
-        using var form = new SettingsForm(_settings);
+        _uploader ??= new UploadService();
+        using var form = new SettingsForm(_settings, _uploader);
         if (form.ShowDialog() == DialogResult.OK)
         {
             UpdateOnboardingBanner();
@@ -471,7 +473,9 @@ public partial class MainForm : Form
     private void lvHistory_DoubleClick(object sender, EventArgs e)
     {
         if (lvHistory.SelectedItems.Count == 0) return;
-        if (lvHistory.SelectedItems[0].Tag is string url && !string.IsNullOrEmpty(url))
+        if (lvHistory.SelectedItems[0].Tag is string url &&
+            Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
             {
                 UseShellExecute = true,

@@ -1,5 +1,4 @@
 // Forms/SettingsForm.cs
-using System.Net.Http.Json;
 using WarcraftPulseUploader.Native;
 using WarcraftPulseUploader.Services;
 
@@ -8,6 +7,8 @@ namespace WarcraftPulseUploader.Forms;
 public partial class SettingsForm : Form
 {
     private readonly AppSettings _settings;
+    private readonly UploadService _uploader;
+    private CancellationTokenSource? _testCts;
 
     protected override void OnHandleCreated(EventArgs e)
     {
@@ -18,10 +19,11 @@ public partial class SettingsForm : Form
         DarkMode.ApplyToControl(chkStartWithWindows.Handle);
     }
 
-    public SettingsForm(AppSettings settings)
+    public SettingsForm(AppSettings settings, UploadService uploader)
     {
         InitializeComponent();
         _settings = settings;
+        _uploader = uploader;
 
         txtApiToken.Text   = settings.ApiToken;
         txtLogDir.Text     = settings.WowLogDirectory;
@@ -78,41 +80,47 @@ public partial class SettingsForm : Form
             key.DeleteValue(AppName, throwOnMissingValue: false);
     }
 
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        _testCts?.Cancel();
+        _testCts?.Dispose();
+        base.OnFormClosed(e);
+    }
+
     private async void btnTestToken_Click(object sender, EventArgs e)
     {
+        _testCts?.Cancel();
+        _testCts?.Dispose();
+        _testCts = new CancellationTokenSource();
+
         btnTestToken.Enabled = false;
         btnTestToken.Text    = "Testing…";
 
-        using var http    = new HttpClient { BaseAddress = new Uri("https://warcraftpulse.com/") };
-        using var request = new HttpRequestMessage(HttpMethod.Get, "api/user");
-        request.Headers.Authorization =
-            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", txtApiToken.Text.Trim());
-
         try
         {
-            using var response = await http.SendAsync(request);
-            if (response.IsSuccessStatusCode)
+            var (success, message) = await _uploader.TestTokenAsync(txtApiToken.Text.Trim(), _testCts.Token);
+
+            if (IsDisposed) return;
+
+            if (success)
             {
-                var json = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-                string name = json.TryGetProperty("name", out var n) ? n.GetString() ?? "?" : "?";
                 lblTokenStatus.ForeColor = System.Drawing.Color.FromArgb(74, 222, 128);
-                lblTokenStatus.Text      = $"✓ Connected as {name}";
+                lblTokenStatus.Text      = $"✓ Connected as {message}";
             }
             else
             {
                 lblTokenStatus.ForeColor = System.Drawing.Color.FromArgb(248, 113, 113);
-                lblTokenStatus.Text      = $"✕ Token rejected (HTTP {(int)response.StatusCode})";
+                lblTokenStatus.Text      = $"✕ {message}";
             }
         }
-        catch (Exception ex)
-        {
-            lblTokenStatus.ForeColor = System.Drawing.Color.FromArgb(248, 113, 113);
-            lblTokenStatus.Text      = $"✕ Could not reach server: {ex.Message}";
-        }
+        catch (TaskCanceledException) { return; }
         finally
         {
-            btnTestToken.Enabled = true;
-            btnTestToken.Text    = "Test";
+            if (!IsDisposed)
+            {
+                btnTestToken.Enabled = true;
+                btnTestToken.Text    = "Test";
+            }
         }
     }
 }
