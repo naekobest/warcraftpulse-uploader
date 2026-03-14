@@ -510,10 +510,14 @@ public static class CombatLogParser
 /// <summary>Hard caps on per-fight collection sizes to bound memory and upload payload.</summary>
 public static class ParseLimits
 {
+    // 40-player raid × ~25 wipes per boss = 1 000; comfortably covers the longest progression sessions.
     public const int MaxDeathsPerFight     = 1000;
+    // ~1 250 casts/min × 40 players × 60-min fight = upper bound well below 50 000 for any real log.
     public const int MaxCastsPerFight      = 50_000;
+    // Interrupts and dispels are rare; 5 000 is orders of magnitude above any real encounter.
     public const int MaxInterruptsPerFight = 5_000;
     public const int MaxDispelsPerFight    = 5_000;
+    // Each aura typically has 1–3 bands; 10 000 is far above the ~200 distinct buffs in a 40-player raid.
     public const int MaxAuraBands          = 10_000;
 }
 
