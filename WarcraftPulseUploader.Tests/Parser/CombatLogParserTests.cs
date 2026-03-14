@@ -306,3 +306,42 @@ public class TimestampParsingTests
         Assert.Equal(0, data.Fights[0].EndTime - data.Fights[0].StartTime);
     }
 }
+
+public class TryParseTimestampTests
+{
+    [Theory]
+    [InlineData("1/15 21:45:23.456",  1, 15, 21, 45, 23, 456)]
+    [InlineData("12/31 9:05:01.000", 12, 31,  9,  5,  1,   0)]
+    [InlineData("3/1 0:00:00.001",    3,  1,  0,  0,  0,   1)]
+    [InlineData("6/15 23:59:59.999",  6, 15, 23, 59, 59, 999)]
+    public void TryParseTimestamp_ValidInput_ParsesCorrectly(
+        string ts, int month, int day, int hour, int minute, int second, int ms)
+    {
+        int year = DateTime.Now.Year;
+        bool ok = CombatLogParser.TryParseTimestamp(ts.AsSpan(), year, out DateTime result);
+        Assert.True(ok);
+        Assert.Equal(month,  result.Month);
+        Assert.Equal(day,    result.Day);
+        Assert.Equal(hour,   result.Hour);
+        Assert.Equal(minute, result.Minute);
+        Assert.Equal(second, result.Second);
+        Assert.Equal(ms,     result.Millisecond);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("13/1 0:00:00.000")]   // month 13
+    [InlineData("0/1 0:00:00.000")]    // month 0
+    [InlineData("1/32 0:00:00.000")]   // day 32
+    [InlineData("1/1 25:00:00.000")]   // hour 25
+    [InlineData("1/1 0:60:00.000")]    // minute 60
+    [InlineData("1/1 0:00:60.000")]    // second 60
+    [InlineData("1/1 0:00:00.1000")]   // ms 1000
+    [InlineData("not a timestamp")]
+    [InlineData("1/1")]                // missing time part
+    public void TryParseTimestamp_InvalidInput_ReturnsFalse(string ts)
+    {
+        bool ok = CombatLogParser.TryParseTimestamp(ts.AsSpan(), 2024, out _);
+        Assert.False(ok);
+    }
+}

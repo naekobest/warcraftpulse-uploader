@@ -10,7 +10,7 @@ public static class CombatLogParser
 
     private const uint PlayerFlag = 0x00000400;
 
-    public static CombatLogData Parse(string filePath)
+    internal static CombatLogData Parse(string filePath)
     {
         using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8,
             detectEncodingFromByteOrderMarks: true, bufferSize: 65536);
@@ -512,7 +512,7 @@ public static class CombatLogParser
         dict[key] = dict.GetValueOrDefault(key) + amount;
     }
 
-    private static bool TryParseTimestamp(ReadOnlySpan<char> s, int year, out DateTime result)
+    internal static bool TryParseTimestamp(ReadOnlySpan<char> s, int year, out DateTime result)
     {
         result = default;
         // Format: M/d H:mm:ss.fff
