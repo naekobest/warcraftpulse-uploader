@@ -197,32 +197,20 @@ public partial class MainForm : Form
 
         btnUpload.Enabled = false;
 
-        string fileHash;
-        try
+        // Size check — no disk read, just metadata
+        const long MaxBytes = 500L * 1024 * 1024;
+        var fileInfo = new FileInfo(filePath);
+        if (!fileInfo.Exists)
         {
-            fileHash = await Task.Run(() => UploadHistory.HashFile(filePath), ct);
-        }
-        catch (IOException ex)
-        {
-            SetStatus($"Error reading log file: {ex.Message}", StatusKind.Error);
+            SetStatus("Error: Log file not found.", StatusKind.Error);
             btnUpload.Enabled = true;
             return;
         }
-
-        if (_history.IsDuplicate(fileHash))
+        if (fileInfo.Length > MaxBytes)
         {
-            var proceed = MessageBox.Show(
-                "This log file was already uploaded.\n\nUpload again?",
-                "Duplicate Log",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question
-            );
-            if (proceed != DialogResult.Yes)
-            {
-                SetStatus("Skipped — already uploaded.", StatusKind.Idle);
-                btnUpload.Enabled = true;
-                return;
-            }
+            SetStatus($"Error: Log file too large ({fileInfo.Length / 1024 / 1024} MB, max 500 MB).", StatusKind.Error);
+            btnUpload.Enabled = true;
+            return;
         }
 
         try
@@ -242,15 +230,38 @@ public partial class MainForm : Form
             SetStatus($"Parsing: {Path.GetFileName(filePath)}…", StatusKind.Processing);
 
             CombatLogData data;
+            string fileHash;
             try
             {
-                data = await Task.Run(() => CombatLogParser.ParseWithSizeGuard(filePath), ct);
+                (data, fileHash) = await Task.Run(() => CombatLogParser.ParseWithHash(filePath), ct);
             }
             catch (ParseException ex)
             {
                 SetStatus($"Parse error: {ex.Message}", StatusKind.Error);
                 btnUpload.Enabled = true;
                 return;
+            }
+            catch (IOException ex)
+            {
+                SetStatus($"Error reading log file: {ex.Message}", StatusKind.Error);
+                btnUpload.Enabled = true;
+                return;
+            }
+
+            if (_history.IsDuplicate(fileHash))
+            {
+                var proceed = MessageBox.Show(
+                    "This log file was already uploaded.\n\nUpload again?",
+                    "Duplicate Log",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+                if (proceed != DialogResult.Yes)
+                {
+                    SetStatus("Skipped — already uploaded.", StatusKind.Idle);
+                    btnUpload.Enabled = true;
+                    return;
+                }
             }
 
             if (!_settings.AutoUpload)

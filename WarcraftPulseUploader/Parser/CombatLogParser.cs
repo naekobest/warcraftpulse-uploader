@@ -12,8 +12,36 @@ public static class CombatLogParser
 
     public static CombatLogData Parse(string filePath)
     {
-        using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 65536);
+        using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8,
+            detectEncodingFromByteOrderMarks: true, bufferSize: 65536);
+        return ParseCore(reader);
+    }
 
+    public static (CombatLogData data, string hash) ParseWithHash(string filePath)
+    {
+        using var fileStream   = new FileStream(filePath, FileMode.Open, FileAccess.Read,
+                                     FileShare.ReadWrite, bufferSize: 65536);
+        using var sha          = System.Security.Cryptography.SHA256.Create();
+        using var cryptoStream = new System.Security.Cryptography.CryptoStream(
+                                     fileStream, sha,
+                                     System.Security.Cryptography.CryptoStreamMode.Read,
+                                     leaveOpen: false);
+        using var reader       = new StreamReader(cryptoStream, System.Text.Encoding.UTF8,
+                                     detectEncodingFromByteOrderMarks: true, bufferSize: 65536);
+
+        var data = ParseCore(reader);
+
+        // Ensure all bytes have flowed through the CryptoStream.
+        // ReadLine() reads to EOF so the buffer is normally already empty,
+        // but this is a defensive safeguard.
+        cryptoStream.CopyTo(Stream.Null);
+
+        string hash = Convert.ToHexString(sha.Hash!);
+        return (data, hash);
+    }
+
+    private static CombatLogData ParseCore(StreamReader reader)
+    {
         var header = reader.ReadLine()
             ?? throw new ParseException("File is empty.");
 

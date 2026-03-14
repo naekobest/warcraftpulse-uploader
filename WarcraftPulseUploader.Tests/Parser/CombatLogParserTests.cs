@@ -1,4 +1,5 @@
 using WarcraftPulseUploader.Parser;
+using WarcraftPulseUploader.Services;
 using Xunit;
 
 namespace WarcraftPulseUploader.Tests.Parser;
@@ -170,9 +171,20 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
             File.WriteAllText(path, sb.ToString());
             var data = CombatLogParser.ParseWithSizeGuard(path);
             Assert.True(data.Deaths.ContainsKey("1"));
-            Assert.True(data.Deaths["1"].Count <= WarcraftPulseUploader.Parser.ParseLimits.MaxDeathsPerFight);
+            Assert.Equal(ParseLimits.MaxDeathsPerFight, data.Deaths["1"].Count);
         }
         finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void ParseWithHash_HashMatchesManualSha256()
+    {
+        string fixturePath = Path.Combine(AppContext.BaseDirectory, "Parser", "Fixtures", "sample.txt");
+        string expectedHash = UploadHistory.HashFile(fixturePath);
+
+        var (_, actualHash) = CombatLogParser.ParseWithHash(fixturePath);
+
+        Assert.Equal(expectedHash, actualHash, ignoreCase: true);
     }
 
     [Fact]
