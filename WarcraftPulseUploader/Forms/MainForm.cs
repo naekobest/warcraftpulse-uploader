@@ -68,14 +68,17 @@ public partial class MainForm : Form
         // Blue accent stripe at top + bottom separator on stats strip
         pnlStats.Paint += (_, pe) =>
         {
-            pe.Graphics.FillRectangle(new System.Drawing.SolidBrush(ClrBlue), 0, 0, pnlStats.Width, 2);
-            pe.Graphics.FillRectangle(new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35)),
-                0, pnlStats.Height - 1, pnlStats.Width, 1);
+            using var accentBrush = new System.Drawing.SolidBrush(ClrBlue);
+            pe.Graphics.FillRectangle(accentBrush, 0, 0, pnlStats.Width, 2);
+            using var sepBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35));
+            pe.Graphics.FillRectangle(sepBrush, 0, pnlStats.Height - 1, pnlStats.Width, 1);
         };
         // Top separator on footer
         pnlFooter.Paint += (_, pe) =>
-            pe.Graphics.FillRectangle(new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35)),
-                0, 0, pnlFooter.Width, 1);
+        {
+            using var footerBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35));
+            pe.Graphics.FillRectangle(footerBrush, 0, 0, pnlFooter.Width, 1);
+        };
 
         // Button hover states
         WireHover(btnUpload,   ClrBlue, System.Drawing.Color.FromArgb(0x60, 0x78, 0xf8));
@@ -469,10 +472,11 @@ public partial class MainForm : Form
 
     private void lvHistory_DrawColumnHeader(object? sender, DrawListViewColumnHeaderEventArgs e)
     {
-        e.Graphics.FillRectangle(new System.Drawing.SolidBrush(ClrDark), e.Bounds);
+        using var headerBrush = new System.Drawing.SolidBrush(ClrDark);
+        e.Graphics.FillRectangle(headerBrush, e.Bounds);
         // Bottom border
-        e.Graphics.DrawLine(new System.Drawing.Pen(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35)),
-            e.Bounds.Left, e.Bounds.Bottom - 1, e.Bounds.Right, e.Bounds.Bottom - 1);
+        using var separatorPen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(0x25, 0x25, 0x35));
+        e.Graphics.DrawLine(separatorPen, e.Bounds.Left, e.Bounds.Bottom - 1, e.Bounds.Right, e.Bounds.Bottom - 1);
         TextRenderer.DrawText(e.Graphics, e.Header!.Text, FontSmall,
             System.Drawing.Rectangle.FromLTRB(e.Bounds.Left + 6, e.Bounds.Top, e.Bounds.Right, e.Bounds.Bottom),
             ClrSecond, TextFormatFlags.VerticalCenter | TextFormatFlags.Left);
@@ -498,7 +502,8 @@ public partial class MainForm : Form
         else
             bg = e.ItemIndex % 2 == 0 ? ClrDark : ClrDarkAlt;
 
-        e.Graphics.FillRectangle(new System.Drawing.SolidBrush(bg), e.Bounds);
+        using var rowBrush = new System.Drawing.SolidBrush(bg);
+        e.Graphics.FillRectangle(rowBrush, e.Bounds);
 
         if (isPlaceholder)
         {
@@ -549,8 +554,10 @@ public partial class MainForm : Form
             var prev = e.Graphics.SmoothingMode;
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             using var path = RoundedRectPath(new System.Drawing.RectangleF(px, py, pw, ph), 9f);
-            e.Graphics.FillPath(new System.Drawing.SolidBrush(pillBg), path);
-            e.Graphics.DrawPath(new System.Drawing.Pen(pillBorder, 1f), path);
+            using var pillBrush = new System.Drawing.SolidBrush(pillBg);
+            using var pillPen   = new System.Drawing.Pen(pillBorder, 1f);
+            e.Graphics.FillPath(pillBrush, path);
+            e.Graphics.DrawPath(pillPen, path);
             e.Graphics.SmoothingMode = prev;
 
             TextRenderer.DrawText(e.Graphics, text, FontSmall,
