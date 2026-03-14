@@ -306,11 +306,13 @@ public static class CombatLogParser
             }
 
             case "SPELL_CAST_SUCCESS":
-                if (srcIsPlayer && srcId > 0 && fields.Length > 9 && casts[fightId].Count < ParseLimits.MaxCastsPerFight)
+                if (srcIsPlayer && srcId > 0 && fields.Length > 9)
                 {
                     int spellId = ParseInt(fields[9]);
+                    // Always track first spell for class detection, even after the cast list is full.
                     firstSpell.TryAdd(srcId, spellId);
-                    casts[fightId].Add(new RawEvent { SourceId = srcId, SpellId = spellId, SpellName = fields[10], Timestamp = tsMs });
+                    if (casts[fightId].Count < ParseLimits.MaxCastsPerFight)
+                        casts[fightId].Add(new RawEvent { SourceId = srcId, SpellId = spellId, SpellName = fields[10], Timestamp = tsMs });
                 }
                 break;
 

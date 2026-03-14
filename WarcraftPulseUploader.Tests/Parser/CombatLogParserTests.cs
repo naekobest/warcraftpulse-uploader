@@ -198,11 +198,11 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
         sb.AppendLine("1/1 0:00:01.000  ENCOUNTER_START,703,Ragnaros,9,40");
         for (int i = 0; i < ParseLimits.MaxAuraBands + 100; i++)
         {
-            long applyMs  = 2000 + i * 2;
-            long removeMs = applyMs + 1;
-            // SPELL_AURA_APPLIED: src fields don't matter, tgt is a player (flags 0x00000512)
-            sb.AppendLine($"1/1 0:00:02.000  SPELL_AURA_APPLIED,0x0000000000000001,Npc,0x10a48,0x0,0x0000000000000002,Player1-Realm,0x00000512,0x0,9999,PowerWordFortitude,1,BUFF");
-            sb.AppendLine($"1/1 0:00:02.001  SPELL_AURA_REMOVED,0x0000000000000001,Npc,0x10a48,0x0,0x0000000000000002,Player1-Realm,0x00000512,0x0,9999,PowerWordFortitude,1,BUFF");
+            // Use distinct timestamps so each band has a non-zero duration.
+            string applyTs  = $"1/1 0:{i / 3600:D2}:{(i % 3600) / 60:D2}:{i % 60:D2}.000";
+            string removeTs = $"1/1 0:{i / 3600:D2}:{(i % 3600) / 60:D2}:{i % 60:D2}.500";
+            sb.AppendLine($"{applyTs}  SPELL_AURA_APPLIED,0x0000000000000001,Npc,0x10a48,0x0,0x0000000000000002,Player1-Realm,0x00000512,0x0,9999,PowerWordFortitude,1,BUFF");
+            sb.AppendLine($"{removeTs}  SPELL_AURA_REMOVED,0x0000000000000001,Npc,0x10a48,0x0,0x0000000000000002,Player1-Realm,0x00000512,0x0,9999,PowerWordFortitude,1,BUFF");
         }
         sb.AppendLine("1/1 0:00:03.000  ENCOUNTER_END,703,Ragnaros,9,40,1");
 
