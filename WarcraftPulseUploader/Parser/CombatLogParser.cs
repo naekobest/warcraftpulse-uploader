@@ -147,6 +147,12 @@ public static class CombatLogParser
                         long startMs = (long)(openFightStart - reportStart!.Value).TotalMilliseconds;
                         long endMs   = (long)(ts - reportStart.Value).TotalMilliseconds;
 
+                        // Close any aura bands still open at encounter end (SPELL_AURA_REMOVED never fired)
+                        foreach (var tracker in buffs[fightId].Values)
+                            tracker.CloseBand(endMs);
+                        foreach (var tracker in debuffs[fightId].Values)
+                            tracker.CloseBand(endMs);
+
                         fights.Add(new FightData
                         {
                             Id          = fightId,
