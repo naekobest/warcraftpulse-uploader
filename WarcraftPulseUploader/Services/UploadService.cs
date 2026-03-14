@@ -28,6 +28,12 @@ public sealed class UploadService : IDisposable
             BaseAddress = new Uri(BaseUrl),
             Timeout     = TimeSpan.FromSeconds(60),
         };
+        var version = System.Reflection.Assembly
+            .GetExecutingAssembly()
+            .GetName()
+            .Version;
+        string versionStr = version is null ? "0.0.0" : $"{version.Major}.{version.Minor}.{version.Build}";
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd($"WarcraftPulseUploader/{versionStr}");
     }
 
     public async Task<UploadResult> UploadAsync(
