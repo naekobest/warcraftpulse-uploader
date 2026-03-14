@@ -66,16 +66,16 @@ public static class CombatLogParser
         int openDifficulty     = 0;
         DateTime openFightStart = default;
 
-        var damageDone     = new Dictionary<string, Dictionary<int, long>>();
-        var damageTaken    = new Dictionary<string, Dictionary<int, long>>();
-        var healingDone    = new Dictionary<string, Dictionary<int, long>>();
-        var deaths         = new Dictionary<string, List<DeathEvent>>();
-        var buffs          = new Dictionary<string, Dictionary<int, AuraTracker>>();
-        var debuffs        = new Dictionary<string, Dictionary<int, AuraTracker>>();
-        var castEvents     = new Dictionary<string, List<RawEvent>>();
-        var interrupts     = new Dictionary<string, List<RawEvent>>();
-        var dispels        = new Dictionary<string, List<RawEvent>>();
-        var combatantInfos = new Dictionary<string, List<CombatantInfoEvent>>();
+        var damageDone     = new Dictionary<int, Dictionary<int, long>>();
+        var damageTaken    = new Dictionary<int, Dictionary<int, long>>();
+        var healingDone    = new Dictionary<int, Dictionary<int, long>>();
+        var deaths         = new Dictionary<int, List<DeathEvent>>();
+        var buffs          = new Dictionary<int, Dictionary<int, AuraTracker>>();
+        var debuffs        = new Dictionary<int, Dictionary<int, AuraTracker>>();
+        var castEvents     = new Dictionary<int, List<RawEvent>>();
+        var interrupts     = new Dictionary<int, List<RawEvent>>();
+        var dispels        = new Dictionary<int, List<RawEvent>>();
+        var combatantInfos = new Dictionary<int, List<CombatantInfoEvent>>();
 
         var playerMeta = new Dictionary<int, PlayerMeta>();
         var firstSpell = new Dictionary<int, int>();
@@ -120,17 +120,16 @@ public static class CombatLogParser
                         openDifficulty   = int.TryParse(fields[3], out int diff) ? diff : 0;
                         openFightStart   = ts;
 
-                        string fid = fightSeq.ToString();
-                        damageDone [fid] = new();
-                        damageTaken[fid] = new();
-                        healingDone[fid] = new();
-                        deaths     [fid] = new();
-                        buffs      [fid] = new();
-                        debuffs    [fid] = new();
-                        castEvents [fid] = new();
-                        interrupts [fid] = new();
-                        dispels    [fid] = new();
-                        combatantInfos[fid] = new();
+                        damageDone [fightSeq] = new();
+                        damageTaken[fightSeq] = new();
+                        healingDone[fightSeq] = new();
+                        deaths     [fightSeq] = new();
+                        buffs      [fightSeq] = new();
+                        debuffs    [fightSeq] = new();
+                        castEvents [fightSeq] = new();
+                        interrupts [fightSeq] = new();
+                        dispels    [fightSeq] = new();
+                        combatantInfos[fightSeq] = new();
                     }
                     break;
 
@@ -172,7 +171,7 @@ public static class CombatLogParser
 
                         DetectClassFromTalents(actorId, t1, t2, t3, playerMeta);
 
-                        combatantInfos[cfFightId.ToString()].Add(new CombatantInfoEvent
+                        combatantInfos[cfFightId].Add(new CombatantInfoEvent
                         {
                             SourceId   = actorId,
                             TalentTree = [t1, t2, t3],
@@ -182,7 +181,7 @@ public static class CombatLogParser
 
                 default:
                     if (openFightId is int activeFight)
-                        ProcessEvent(eventType, fields, activeFight.ToString(), ts, reportStart!.Value,
+                        ProcessEvent(eventType, fields, activeFight, ts, reportStart!.Value,
                             actorMap, ref nextActorId, playerMeta, firstSpell,
                             damageDone, damageTaken, healingDone,
                             deaths, buffs, debuffs, castEvents, interrupts, dispels);
@@ -214,20 +213,20 @@ public static class CombatLogParser
     }
 
     private static void ProcessEvent(
-        string eventType, string[] fields, string fightId,
+        string eventType, string[] fields, int fightId,
         DateTime ts, DateTime reportStart,
         Dictionary<string, int> actorMap, ref int nextActorId,
         Dictionary<int, PlayerMeta> playerMeta,
         Dictionary<int, int> firstSpell,
-        Dictionary<string, Dictionary<int, long>> damageDone,
-        Dictionary<string, Dictionary<int, long>> damageTaken,
-        Dictionary<string, Dictionary<int, long>> healingDone,
-        Dictionary<string, List<DeathEvent>> deaths,
-        Dictionary<string, Dictionary<int, AuraTracker>> buffs,
-        Dictionary<string, Dictionary<int, AuraTracker>> debuffs,
-        Dictionary<string, List<RawEvent>> casts,
-        Dictionary<string, List<RawEvent>> interrupts,
-        Dictionary<string, List<RawEvent>> dispels)
+        Dictionary<int, Dictionary<int, long>> damageDone,
+        Dictionary<int, Dictionary<int, long>> damageTaken,
+        Dictionary<int, Dictionary<int, long>> healingDone,
+        Dictionary<int, List<DeathEvent>> deaths,
+        Dictionary<int, Dictionary<int, AuraTracker>> buffs,
+        Dictionary<int, Dictionary<int, AuraTracker>> debuffs,
+        Dictionary<int, List<RawEvent>> casts,
+        Dictionary<int, List<RawEvent>> interrupts,
+        Dictionary<int, List<RawEvent>> dispels)
     {
         if (fields.Length < 9) return;
 
@@ -332,29 +331,37 @@ public static class CombatLogParser
         DateTime start, DateTime end,
         List<FightData> fights,
         Dictionary<int, PlayerMeta> playerMeta,
-        Dictionary<string, Dictionary<int, long>> damageDone,
-        Dictionary<string, Dictionary<int, long>> damageTaken,
-        Dictionary<string, Dictionary<int, long>> healingDone,
-        Dictionary<string, List<DeathEvent>> deaths,
-        Dictionary<string, Dictionary<int, AuraTracker>> buffs,
-        Dictionary<string, Dictionary<int, AuraTracker>> debuffs,
-        Dictionary<string, List<CombatantInfoEvent>> combatantInfos,
-        Dictionary<string, List<RawEvent>> casts,
-        Dictionary<string, List<RawEvent>> interrupts,
-        Dictionary<string, List<RawEvent>> dispels)
+        Dictionary<int, Dictionary<int, long>> damageDone,
+        Dictionary<int, Dictionary<int, long>> damageTaken,
+        Dictionary<int, Dictionary<int, long>> healingDone,
+        Dictionary<int, List<DeathEvent>> deaths,
+        Dictionary<int, Dictionary<int, AuraTracker>> buffs,
+        Dictionary<int, Dictionary<int, AuraTracker>> debuffs,
+        Dictionary<int, List<CombatantInfoEvent>> combatantInfos,
+        Dictionary<int, List<RawEvent>> casts,
+        Dictionary<int, List<RawEvent>> interrupts,
+        Dictionary<int, List<RawEvent>> dispels)
     {
         var players = BuildPlayerDetails(playerMeta);
 
         var events = new Dictionary<string, Dictionary<string, List<RawEvent>>>();
         foreach (var fightId in casts.Keys)
         {
-            events[fightId] = new Dictionary<string, List<RawEvent>>
+            events[fightId.ToString()] = new Dictionary<string, List<RawEvent>>
             {
                 ["Casts"]      = casts[fightId],
                 ["Interrupts"] = interrupts[fightId],
                 ["Dispels"]    = dispels[fightId],
             };
         }
+
+        var deathsOut = new Dictionary<string, List<DeathEvent>>(deaths.Count);
+        foreach (var (fightId, list) in deaths)
+            deathsOut[fightId.ToString()] = list;
+
+        var combatantInfosOut = new Dictionary<string, List<CombatantInfoEvent>>(combatantInfos.Count);
+        foreach (var (fightId, list) in combatantInfos)
+            combatantInfosOut[fightId.ToString()] = list;
 
         return new CombatLogData
         {
@@ -368,20 +375,20 @@ public static class CombatLogParser
             DamageDone       = ToEntriesWrappers(damageDone, playerMeta),
             DamageTaken      = ToEntriesWrappers(damageTaken, playerMeta),
             Healing          = ToEntriesWrappers(healingDone, playerMeta),
-            Deaths           = deaths,
+            Deaths           = deathsOut,
             Buffs            = ToAurasWrappers(buffs),
             Debuffs          = ToAurasWrappers(debuffs),
-            CombatantInfo    = combatantInfos,
+            CombatantInfo    = combatantInfosOut,
             Events           = events,
             ReportWideEvents = [],
         };
     }
 
     private static Dictionary<string, EntriesWrapper> ToEntriesWrappers(
-        Dictionary<string, Dictionary<int, long>> source,
+        Dictionary<int, Dictionary<int, long>> source,
         Dictionary<int, PlayerMeta> meta)
     {
-        var result = new Dictionary<string, EntriesWrapper>();
+        var result = new Dictionary<string, EntriesWrapper>(source.Count);
         foreach (var (fightId, actorTotals) in source)
         {
             var entries = actorTotals
@@ -391,18 +398,18 @@ public static class CombatLogParser
                     Total = kv.Value,
                 })
                 .ToList();
-            result[fightId] = new EntriesWrapper { Entries = entries };
+            result[fightId.ToString()] = new EntriesWrapper { Entries = entries };
         }
         return result;
     }
 
     private static Dictionary<string, AurasWrapper> ToAurasWrappers(
-        Dictionary<string, Dictionary<int, AuraTracker>> source)
+        Dictionary<int, Dictionary<int, AuraTracker>> source)
     {
-        var result = new Dictionary<string, AurasWrapper>();
+        var result = new Dictionary<string, AurasWrapper>(source.Count);
         foreach (var (fightId, trackers) in source)
         {
-            result[fightId] = new AurasWrapper
+            result[fightId.ToString()] = new AurasWrapper
             {
                 Auras = trackers.Values.Select(t => t.ToAuraData()).ToList(),
             };
