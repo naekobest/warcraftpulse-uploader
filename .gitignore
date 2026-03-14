@@ -404,6 +404,9 @@ FodyWeavers.xsd
 *.sln.iml
 .idea
 
+# Implementation plans (local only)
+docs/superpowers/
+
 ##
 ## Visual studio for Mac
 ##
