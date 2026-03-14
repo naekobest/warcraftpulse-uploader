@@ -19,6 +19,10 @@ public static class CombatLogParser
 
     public static (CombatLogData data, string hash) ParseWithHash(string filePath)
     {
+        var info = new FileInfo(filePath);
+        if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            throw new ParseException("Symlinks and junctions are not supported as combat log paths.");
+
         using var fileStream   = new FileStream(filePath, FileMode.Open, FileAccess.Read,
                                      FileShare.ReadWrite, bufferSize: 65536);
         using var sha          = System.Security.Cryptography.SHA256.Create();
@@ -553,6 +557,8 @@ public static class CombatLogParser
         }
         if (count < buffer.Length)
             buffer[count++] = ExtractUnquoted(line[start..]);
+        System.Diagnostics.Debug.Assert(count <= buffer.Length,
+            $"CSV field count {count} exceeded buffer size {buffer.Length} — increase MaxCsvFields.");
         return count;
     }
 
