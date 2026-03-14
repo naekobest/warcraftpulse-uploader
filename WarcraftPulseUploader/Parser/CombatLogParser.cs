@@ -84,6 +84,8 @@ public static class CombatLogParser
         var playerMeta = new Dictionary<int, PlayerMeta>();
         var firstSpell = new Dictionary<int, int>();
 
+        // Year is not in the log timestamp — use current year. Edge case: logs spanning
+        // Dec 31 → Jan 1 will have wrong year for the January portion if parsed after midnight.
         int parseYear = DateTime.Now.Year;
 
         const int MaxCsvFields = 40; // COMBATANT_INFO accesses up to index 26; 40 gives headroom
@@ -375,13 +377,8 @@ public static class CombatLogParser
             };
         }
 
-        var deathsOut = new Dictionary<string, List<DeathEvent>>(deaths.Count);
-        foreach (var (fightId, list) in deaths)
-            deathsOut[fightId.ToString()] = list;
-
-        var combatantInfosOut = new Dictionary<string, List<CombatantInfoEvent>>(combatantInfos.Count);
-        foreach (var (fightId, list) in combatantInfos)
-            combatantInfosOut[fightId.ToString()] = list;
+        var deathsOut         = ToStringKeys(deaths);
+        var combatantInfosOut = ToStringKeys(combatantInfos);
 
         return new CombatLogData
         {
@@ -402,6 +399,14 @@ public static class CombatLogParser
             Events           = events,
             ReportWideEvents = [],
         };
+    }
+
+    private static Dictionary<string, TValue> ToStringKeys<TValue>(Dictionary<int, TValue> source)
+    {
+        var result = new Dictionary<string, TValue>(source.Count);
+        foreach (var (k, v) in source)
+            result[k.ToString()] = v;
+        return result;
     }
 
     private static Dictionary<string, EntriesWrapper> ToEntriesWrappers(
