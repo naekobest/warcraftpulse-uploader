@@ -88,15 +88,12 @@ public static class CombatLogParser
             int sep = line.IndexOf("  ");
             if (sep < 0) continue;
 
-            string timestampStr = line[..sep];
-            string rest         = line[(sep + 2)..];
-
-            if (!TryParseTimestamp(timestampStr, out DateTime ts)) continue;
+            if (!TryParseTimestamp(line.AsSpan(0, sep), out DateTime ts)) continue;
 
             reportStart ??= ts;
             reportEnd     = ts;
 
-            var fields = SplitCsvLine(rest.AsSpan());
+            var fields = SplitCsvLine(line.AsSpan(sep + 2));
             if (fields.Length == 0) continue;
             string eventType = fields[0];
 
@@ -489,14 +486,41 @@ public static class CombatLogParser
         dict[key] = dict.GetValueOrDefault(key) + amount;
     }
 
-    private static bool TryParseTimestamp(string s, out DateTime result)
+    private static bool TryParseTimestamp(ReadOnlySpan<char> s, out DateTime result)
     {
         result = default;
-        if (!DateTime.TryParseExact(s, "M/d H:mm:ss.fff",
-                System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out result))
-            return DateTime.TryParse(s, out result);
-        return true;
+        // Format: M/d H:mm:ss.fff
+        int slash = s.IndexOf('/');
+        if (slash <= 0) return false;
+        if (!int.TryParse(s[..slash], out int month) || month is < 1 or > 12) return false;
+
+        int space = s.IndexOf(' ');
+        if (space <= slash) return false;
+        if (!int.TryParse(s[(slash + 1)..space], out int day) || day is < 1 or > 31) return false;
+
+        var time = s[(space + 1)..];
+        int c1 = time.IndexOf(':');
+        if (c1 <= 0) return false;
+        if (!int.TryParse(time[..c1], out int hour) || hour > 23) return false;
+
+        int c2Rel = time[(c1 + 1)..].IndexOf(':');
+        if (c2Rel < 0) return false;
+        int c2 = c1 + 1 + c2Rel;
+        if (!int.TryParse(time[(c1 + 1)..c2], out int minute) || minute > 59) return false;
+
+        int dotRel = time[(c2 + 1)..].IndexOf('.');
+        if (dotRel < 0) return false;
+        int dot = c2 + 1 + dotRel;
+        if (!int.TryParse(time[(c2 + 1)..dot], out int second) || second > 59) return false;
+        if (!int.TryParse(time[(dot + 1)..], out int ms) || ms > 999) return false;
+
+        try
+        {
+            result = new DateTime(DateTime.Now.Year, month, day, hour, minute, second, ms,
+                DateTimeKind.Unspecified);
+            return true;
+        }
+        catch (ArgumentOutOfRangeException) { return false; }
     }
 
     private static string[] SplitCsvLine(ReadOnlySpan<char> line)

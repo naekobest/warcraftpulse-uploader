@@ -247,3 +247,40 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
         }
     }
 }
+
+public class TimestampParsingTests
+{
+    private static CombatLogData ParseMinimalLog(string timestamp)
+    {
+        string header = "COMBAT_LOG_VERSION,9,ADVANCED_LOG_ENABLED,1,BUILD_VERSION,1.15.8,PROJECT_ID,2";
+        string start  = $"{timestamp}  ENCOUNTER_START,1,\"Lucifron\",9,40";
+        string end    = $"{timestamp}  ENCOUNTER_END,1,\"Lucifron\",9,40,1";
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, string.Join("\n", header, start, end));
+            return CombatLogParser.Parse(path);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Theory]
+    [InlineData("1/15 21:45:23.456")]
+    [InlineData("12/31 9:05:01.000")]
+    [InlineData("3/1 0:00:00.001")]
+    [InlineData("6/15 23:59:59.999")]
+    public void Parse_ValidTimestamps_ProduceOneFight(string ts)
+    {
+        var data = ParseMinimalLog(ts);
+        Assert.Single(data.Fights);
+    }
+
+    [Theory]
+    [InlineData("1/15 21:45:23.456")]
+    [InlineData("12/31 9:05:01.000")]
+    public void Parse_SameStartEnd_FightDurationIsZero(string ts)
+    {
+        var data = ParseMinimalLog(ts);
+        Assert.Equal(0, data.Fights[0].EndTime - data.Fights[0].StartTime);
+    }
+}
