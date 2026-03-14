@@ -201,10 +201,7 @@ public static class CombatLogParser
             buffs, debuffs, combatantInfos, castEvents, interrupts, dispels);
     }
 
-    // Maximum allowed combat log file size (500 MB)
-    private const long MaxFileSizeBytes = 500L * 1024 * 1024;
-
-    public static CombatLogData ParseWithSizeGuard(string filePath, long maxBytes = MaxFileSizeBytes)
+    public static CombatLogData ParseWithSizeGuard(string filePath, long maxBytes = ParseLimits.MaxFileSizeBytes)
     {
         var info = new FileInfo(filePath);
         if (!info.Exists)
@@ -538,6 +535,8 @@ public static class CombatLogParser
 /// <summary>Hard caps on per-fight collection sizes to bound memory and upload payload.</summary>
 public static class ParseLimits
 {
+    // 500 MB — guards against runaway logs that would OOM the process or timeout the upload.
+    public const long MaxFileSizeBytes     = 500L * 1024 * 1024;
     // 40-player raid × ~25 wipes per boss = 1 000; comfortably covers the longest progression sessions.
     public const int MaxDeathsPerFight     = 1000;
     // ~1 250 casts/min × 40 players × 60-min fight = upper bound well below 50 000 for any real log.

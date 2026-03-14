@@ -198,7 +198,6 @@ public partial class MainForm : Form
         btnUpload.Enabled = false;
 
         // Size check — no disk read, just metadata
-        const long MaxBytes = 500L * 1024 * 1024;
         var fileInfo = new FileInfo(filePath);
         if (!fileInfo.Exists)
         {
@@ -206,7 +205,7 @@ public partial class MainForm : Form
             btnUpload.Enabled = true;
             return;
         }
-        if (fileInfo.Length > MaxBytes)
+        if (fileInfo.Length > ParseLimits.MaxFileSizeBytes)
         {
             SetStatus($"Error: Log file too large ({fileInfo.Length / 1024 / 1024} MB, max 500 MB).", StatusKind.Error);
             btnUpload.Enabled = true;
