@@ -188,6 +188,38 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
     }
 
     [Fact]
+    public void Parse_AuraBandsCappedAtLimit()
+    {
+        // Build a log that applies and removes the same buff more than MaxAuraBands times.
+        // Each APPLIED+REMOVED pair adds one band; the limit should prevent the list from growing further.
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("COMBAT_LOG_VERSION,9,ADVANCED_LOG_ENABLED,1,BUILD_VERSION,1.15.8,PROJECT_ID,2");
+        sb.AppendLine("1/1 0:00:00.000  ZONE_CHANGE,1234,Molten Core,null");
+        sb.AppendLine("1/1 0:00:01.000  ENCOUNTER_START,703,Ragnaros,9,40");
+        for (int i = 0; i < ParseLimits.MaxAuraBands + 100; i++)
+        {
+            long applyMs  = 2000 + i * 2;
+            long removeMs = applyMs + 1;
+            // SPELL_AURA_APPLIED: src fields don't matter, tgt is a player (flags 0x00000512)
+            sb.AppendLine($"1/1 0:00:02.000  SPELL_AURA_APPLIED,0x0000000000000001,Npc,0x10a48,0x0,0x0000000000000002,Player1-Realm,0x00000512,0x0,9999,PowerWordFortitude,1,BUFF");
+            sb.AppendLine($"1/1 0:00:02.001  SPELL_AURA_REMOVED,0x0000000000000001,Npc,0x10a48,0x0,0x0000000000000002,Player1-Realm,0x00000512,0x0,9999,PowerWordFortitude,1,BUFF");
+        }
+        sb.AppendLine("1/1 0:00:03.000  ENCOUNTER_END,703,Ragnaros,9,40,1");
+
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, sb.ToString());
+            var data = CombatLogParser.ParseWithSizeGuard(path);
+            Assert.True(data.Buffs.ContainsKey("1"));
+            var aura = data.Buffs["1"].Auras.FirstOrDefault(a => a.Guid == 9999);
+            Assert.NotNull(aura);
+            Assert.Equal(ParseLimits.MaxAuraBands, aura.Bands.Count);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
     [System.Runtime.Versioning.SupportedOSPlatform("windows")]
     public void ParseWithSizeGuard_ThrowsParseException_WhenPathIsSymlink()
     {
