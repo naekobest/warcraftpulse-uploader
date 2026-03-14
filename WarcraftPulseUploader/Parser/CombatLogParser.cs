@@ -82,7 +82,7 @@ public static class CombatLogParser
 
         int parseYear = DateTime.Now.Year;
 
-        const int MaxCsvFields = 40;
+        const int MaxCsvFields = 40; // COMBATANT_INFO accesses up to index 26; 40 gives headroom
         var fieldsBuffer = System.Buffers.ArrayPool<string>.Shared.Rent(MaxCsvFields);
         try
         {
