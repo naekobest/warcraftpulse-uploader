@@ -18,7 +18,16 @@ public sealed class UploadService : IDisposable
 
     public UploadService()
     {
-        _http = new HttpClient { BaseAddress = new Uri(BaseUrl) };
+        var handler = new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(15),
+            ConnectTimeout           = TimeSpan.FromSeconds(10),
+        };
+        _http = new HttpClient(handler)
+        {
+            BaseAddress = new Uri(BaseUrl),
+            Timeout     = TimeSpan.FromSeconds(60),
+        };
     }
 
     public async Task<UploadResult> UploadAsync(
