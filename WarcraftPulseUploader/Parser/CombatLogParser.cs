@@ -10,7 +10,7 @@ public static class CombatLogParser
 
     private const uint PlayerFlag = 0x00000400;
 
-    public static CombatLogData Parse(string filePath)
+    internal static CombatLogData Parse(string filePath)
     {
         using var reader = new StreamReader(filePath, System.Text.Encoding.UTF8,
             detectEncodingFromByteOrderMarks: true, bufferSize: 65536);
@@ -84,6 +84,8 @@ public static class CombatLogParser
         var playerMeta = new Dictionary<int, PlayerMeta>();
         var firstSpell = new Dictionary<int, int>();
 
+        // Year is not in the log timestamp — use current year. Edge case: logs spanning
+        // Dec 31 → Jan 1 will have wrong year for the January portion if parsed after midnight.
         int parseYear = DateTime.Now.Year;
 
         const int MaxCsvFields = 40; // COMBATANT_INFO accesses up to index 26; 40 gives headroom
@@ -146,6 +148,12 @@ public static class CombatLogParser
                         bool kill = fieldsBuffer[5].Trim() == "1";
                         long startMs = (long)(openFightStart - reportStart!.Value).TotalMilliseconds;
                         long endMs   = (long)(ts - reportStart.Value).TotalMilliseconds;
+
+                        // Close any aura bands still open at encounter end (SPELL_AURA_REMOVED never fired)
+                        foreach (var tracker in buffs[fightId].Values)
+                            tracker.CloseBand(endMs);
+                        foreach (var tracker in debuffs[fightId].Values)
+                            tracker.CloseBand(endMs);
 
                         fights.Add(new FightData
                         {
@@ -369,13 +377,8 @@ public static class CombatLogParser
             };
         }
 
-        var deathsOut = new Dictionary<string, List<DeathEvent>>(deaths.Count);
-        foreach (var (fightId, list) in deaths)
-            deathsOut[fightId.ToString()] = list;
-
-        var combatantInfosOut = new Dictionary<string, List<CombatantInfoEvent>>(combatantInfos.Count);
-        foreach (var (fightId, list) in combatantInfos)
-            combatantInfosOut[fightId.ToString()] = list;
+        var deathsOut         = ToStringKeys(deaths);
+        var combatantInfosOut = ToStringKeys(combatantInfos);
 
         return new CombatLogData
         {
@@ -396,6 +399,14 @@ public static class CombatLogParser
             Events           = events,
             ReportWideEvents = [],
         };
+    }
+
+    private static Dictionary<string, TValue> ToStringKeys<TValue>(Dictionary<int, TValue> source)
+    {
+        var result = new Dictionary<string, TValue>(source.Count);
+        foreach (var (k, v) in source)
+            result[k.ToString()] = v;
+        return result;
     }
 
     private static Dictionary<string, EntriesWrapper> ToEntriesWrappers(
@@ -501,7 +512,7 @@ public static class CombatLogParser
         dict[key] = dict.GetValueOrDefault(key) + amount;
     }
 
-    private static bool TryParseTimestamp(ReadOnlySpan<char> s, int year, out DateTime result)
+    internal static bool TryParseTimestamp(ReadOnlySpan<char> s, int year, out DateTime result)
     {
         result = default;
         // Format: M/d H:mm:ss.fff

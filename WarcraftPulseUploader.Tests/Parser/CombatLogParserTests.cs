@@ -30,10 +30,6 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
         Assert.Equal("Molten Core", _data.ZoneName);
 
     [Fact]
-    public void Parse_Sample_ZoneNameHandlesQuotedFields() =>
-        Assert.False(string.IsNullOrWhiteSpace(_data.ZoneName));
-
-    [Fact]
     public void Parse_Sample_GameVersionIsClassicEra() =>
         Assert.Equal("classic_era", _data.GameVersion);
 
@@ -248,6 +244,32 @@ public class CombatLogParserTests : IClassFixture<SampleFixture>
     }
 }
 
+public class AuraTrackingTests
+{
+    [Fact]
+    public void Parse_OpenAuraBandAtEncounterEnd_IsClosedWithEncounterDuration()
+    {
+        // A SPELL_AURA_APPLIED without a matching REMOVED — the band should be closed at ENCOUNTER_END
+        string header = "COMBAT_LOG_VERSION,9,ADVANCED_LOG_ENABLED,1,BUILD_VERSION,1.15.8,PROJECT_ID,2";
+        string start  = "1/1 0:00:00.000  ENCOUNTER_START,1,\"Lucifron\",9,40";
+        string apply  = "1/1 0:00:01.000  SPELL_AURA_APPLIED,Player-1-00000001,\"Testplayer\",0x400,0x0,Boss-0-00000001,\"Lucifron\",0x0,0x0,17,\"Mark of Kazzak\",0x20,BUFF";
+        string end    = "1/1 0:00:10.000  ENCOUNTER_END,1,\"Lucifron\",9,40,1";
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(path, string.Join("\n", header, start, apply, end));
+            var data = CombatLogParser.Parse(path);
+            Assert.Single(data.Fights);
+            Assert.True(data.Buffs.ContainsKey("1"), "Buffs dict should have fight 1");
+            var aura = data.Buffs["1"].Auras.FirstOrDefault(a => a.Name == "Mark of Kazzak");
+            Assert.NotNull(aura);
+            // Aura applied at 1000ms, encounter ends at 10000ms → uptime should be 9000ms
+            Assert.Equal(9000, aura.TotalUptime);
+        }
+        finally { File.Delete(path); }
+    }
+}
+
 public class TimestampParsingTests
 {
     private static CombatLogData ParseMinimalLog(string timestamp)
@@ -282,5 +304,44 @@ public class TimestampParsingTests
     {
         var data = ParseMinimalLog(ts);
         Assert.Equal(0, data.Fights[0].EndTime - data.Fights[0].StartTime);
+    }
+}
+
+public class TryParseTimestampTests
+{
+    [Theory]
+    [InlineData("1/15 21:45:23.456",  1, 15, 21, 45, 23, 456)]
+    [InlineData("12/31 9:05:01.000", 12, 31,  9,  5,  1,   0)]
+    [InlineData("3/1 0:00:00.001",    3,  1,  0,  0,  0,   1)]
+    [InlineData("6/15 23:59:59.999",  6, 15, 23, 59, 59, 999)]
+    public void TryParseTimestamp_ValidInput_ParsesCorrectly(
+        string ts, int month, int day, int hour, int minute, int second, int ms)
+    {
+        int year = DateTime.Now.Year;
+        bool ok = CombatLogParser.TryParseTimestamp(ts.AsSpan(), year, out DateTime result);
+        Assert.True(ok);
+        Assert.Equal(month,  result.Month);
+        Assert.Equal(day,    result.Day);
+        Assert.Equal(hour,   result.Hour);
+        Assert.Equal(minute, result.Minute);
+        Assert.Equal(second, result.Second);
+        Assert.Equal(ms,     result.Millisecond);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("13/1 0:00:00.000")]   // month 13
+    [InlineData("0/1 0:00:00.000")]    // month 0
+    [InlineData("1/32 0:00:00.000")]   // day 32
+    [InlineData("1/1 25:00:00.000")]   // hour 25
+    [InlineData("1/1 0:60:00.000")]    // minute 60
+    [InlineData("1/1 0:00:60.000")]    // second 60
+    [InlineData("1/1 0:00:00.1000")]   // ms 1000
+    [InlineData("not a timestamp")]
+    [InlineData("1/1")]                // missing time part
+    public void TryParseTimestamp_InvalidInput_ReturnsFalse(string ts)
+    {
+        bool ok = CombatLogParser.TryParseTimestamp(ts.AsSpan(), 2024, out _);
+        Assert.False(ok);
     }
 }

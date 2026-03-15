@@ -326,7 +326,8 @@ public partial class MainForm : Form
 
     private void btnSettings_Click(object sender, EventArgs e)
     {
-        using var form = new SettingsForm(_settings);
+        _uploader ??= new UploadService();
+        using var form = new SettingsForm(_settings, _uploader);
         if (form.ShowDialog() == DialogResult.OK)
         {
             UpdateOnboardingBanner();
@@ -521,8 +522,10 @@ public partial class MainForm : Form
     private void lvMenu_CopyUrl(object? sender, EventArgs e)
     {
         if (lvHistory.SelectedItems.Count == 0) return;
-        if (lvHistory.SelectedItems[0].Tag is string url && !string.IsNullOrEmpty(url))
-            Clipboard.SetText(url);
+        if (lvHistory.SelectedItems[0].Tag is string url &&
+            Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+            (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp))
+            Clipboard.SetText(uri.AbsoluteUri);
     }
 
     private void lvMenu_CopyCode(object? sender, EventArgs e)

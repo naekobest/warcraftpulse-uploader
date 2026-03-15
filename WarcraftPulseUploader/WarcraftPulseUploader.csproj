@@ -18,6 +18,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>WarcraftPulseUploader.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
     <EmbeddedResource Include="Resources\logo.ico" />
     <EmbeddedResource Include="Resources\logo_24.png" />
   </ItemGroup>
