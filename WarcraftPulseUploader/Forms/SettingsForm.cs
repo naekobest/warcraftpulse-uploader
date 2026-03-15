@@ -25,11 +25,26 @@ public partial class SettingsForm : Form
         _settings = settings;
         _uploader = uploader;
 
-        txtApiToken.Text   = settings.ApiToken;
-        txtLogDir.Text     = settings.WowLogDirectory;
+        txtApiToken.Text            = settings.ApiToken;
+        txtLogDir.Text              = settings.WowLogDirectory;
         chkAutoUpload.Checked       = settings.AutoUpload;
         chkMinimizeToTray.Checked   = settings.MinimizeToTray;
         chkStartWithWindows.Checked = settings.StartWithWindows;
+
+        // Show persistent connected badge if we have a previously validated username
+        if (!string.IsNullOrEmpty(settings.ValidatedUserName))
+        {
+            lblConnectedBadge.Text    = $"✓ {settings.ValidatedUserName}";
+            lblConnectedBadge.Visible = true;
+            btnTestToken.Text         = "Re-test";
+        }
+
+        // Clear badge when token text changes
+        txtApiToken.TextChanged += (_, _) =>
+        {
+            lblConnectedBadge.Visible = false;
+            btnTestToken.Text         = "Test";
+        };
     }
 
     private void btnShowHide_Click(object sender, EventArgs e)
@@ -52,8 +67,11 @@ public partial class SettingsForm : Form
 
     private void btnSave_Click(object sender, EventArgs e)
     {
-        _settings.ApiToken         = txtApiToken.Text.Trim();
-        _settings.WowLogDirectory  = txtLogDir.Text.Trim();
+        string newToken = txtApiToken.Text.Trim();
+        if (newToken != _settings.ApiToken)
+            _settings.ValidatedUserName = string.Empty;
+        _settings.ApiToken        = newToken;
+        _settings.WowLogDirectory = txtLogDir.Text.Trim();
         _settings.AutoUpload        = chkAutoUpload.Checked;
         _settings.MinimizeToTray    = chkMinimizeToTray.Checked;
         _settings.StartWithWindows  = chkStartWithWindows.Checked;
@@ -104,8 +122,12 @@ public partial class SettingsForm : Form
 
             if (success)
             {
-                lblTokenStatus.ForeColor = System.Drawing.Color.FromArgb(74, 222, 128);
-                lblTokenStatus.Text      = $"✓ Connected as {message}";
+                lblTokenStatus.ForeColor    = System.Drawing.Color.FromArgb(74, 222, 128);
+                lblTokenStatus.Text         = $"✓ Connected as {message}";
+                lblConnectedBadge.Text      = $"✓ {message}";
+                lblConnectedBadge.Visible   = true;
+                btnTestToken.Text           = "Re-test";
+                _settings.ValidatedUserName = message;
             }
             else
             {
@@ -119,7 +141,8 @@ public partial class SettingsForm : Form
             if (!IsDisposed)
             {
                 btnTestToken.Enabled = true;
-                btnTestToken.Text    = "Test";
+                if (btnTestToken.Text == "Testing…")
+                    btnTestToken.Text = "Test";
             }
         }
     }

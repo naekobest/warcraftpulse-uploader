@@ -30,6 +30,7 @@ partial class SettingsForm
         btnShowHide         = new System.Windows.Forms.Button();
         btnTestToken        = new System.Windows.Forms.Button();
         lblTokenStatus      = new System.Windows.Forms.Label();
+        lblConnectedBadge   = new System.Windows.Forms.Label();
         txtLogDir           = new System.Windows.Forms.TextBox();
         chkAutoUpload       = new System.Windows.Forms.CheckBox();
         chkMinimizeToTray   = new System.Windows.Forms.CheckBox();
@@ -55,14 +56,28 @@ partial class SettingsForm
         lblApiToken.Text      = "API Token";
         lblApiToken.ForeColor = clrPrimary;
         lblApiToken.Location  = new System.Drawing.Point(x, y);
-        lblApiToken.Size      = new System.Drawing.Size(200, 20);
+        lblApiToken.Size      = new System.Drawing.Size(100, 20);
 
-        var lblTokenHint = new System.Windows.Forms.Label();
-        lblTokenHint.Text      = "from warcraftpulse.com/settings/personal-tokens";
-        lblTokenHint.ForeColor = clrMuted;
-        lblTokenHint.Font      = new System.Drawing.Font("Segoe UI", 7.5f);
-        lblTokenHint.Location  = new System.Drawing.Point(x, y + 20);
-        lblTokenHint.Size      = new System.Drawing.Size(w, 16);
+        lblConnectedBadge.Text      = "";
+        lblConnectedBadge.ForeColor = System.Drawing.Color.FromArgb(0x4a, 0xde, 0x80);
+        lblConnectedBadge.Font      = new System.Drawing.Font("Segoe UI", 8f);
+        lblConnectedBadge.Location  = new System.Drawing.Point(x + 104, y + 2);
+        lblConnectedBadge.Size      = new System.Drawing.Size(280, 16);
+        lblConnectedBadge.Visible   = false;
+
+        var lnkTokenHint = new System.Windows.Forms.LinkLabel();
+        lnkTokenHint.Text             = "from warcraftpulse.com/settings/personal-tokens";
+        lnkTokenHint.ForeColor        = clrMuted;
+        lnkTokenHint.LinkColor        = clrMuted;
+        lnkTokenHint.ActiveLinkColor  = clrBlue;
+        lnkTokenHint.VisitedLinkColor = clrMuted;
+        lnkTokenHint.Font             = new System.Drawing.Font("Segoe UI", 7.5f);
+        lnkTokenHint.Location         = new System.Drawing.Point(x, y + 20);
+        lnkTokenHint.Size             = new System.Drawing.Size(w, 16);
+        lnkTokenHint.LinkBehavior     = System.Windows.Forms.LinkBehavior.HoverUnderline;
+        lnkTokenHint.LinkClicked     += (_, _) =>
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                "https://warcraftpulse.com/settings/personal-tokens") { UseShellExecute = true });
 
         y += 40;
         txtApiToken.UseSystemPasswordChar = true;
@@ -100,6 +115,12 @@ partial class SettingsForm
         lblTokenStatus.Location  = new System.Drawing.Point(x, y);
         lblTokenStatus.Size      = new System.Drawing.Size(w, 18);
 
+        // ── Section separator ─────────────────────────────────────────────
+        var sep1 = new System.Windows.Forms.Label();
+        sep1.BackColor = clrBorder;
+        sep1.Location  = new System.Drawing.Point(0, y + 20);
+        sep1.Size      = new System.Drawing.Size(420, 1);
+
         // ── WoW Log Directory ────────────────────────────────────────────
         y += 26;
         var lblLogDir = new System.Windows.Forms.Label();
@@ -128,6 +149,12 @@ partial class SettingsForm
         btnBrowse.Size      = new System.Drawing.Size(86, 23);
         btnBrowse.Cursor    = System.Windows.Forms.Cursors.Hand;
         btnBrowse.Click    += btnBrowse_Click;
+
+        // ── Section separator ─────────────────────────────────────────────
+        var sep2 = new System.Windows.Forms.Label();
+        sep2.BackColor = clrBorder;
+        sep2.Location  = new System.Drawing.Point(0, y + 28);
+        sep2.Size      = new System.Drawing.Size(420, 1);
 
         // ── Toggles ──────────────────────────────────────────────────────
         y += 36;
@@ -220,10 +247,10 @@ partial class SettingsForm
             e.Graphics.FillRectangle(new System.Drawing.SolidBrush(clrBorder), 0, 0, pnlFooter.Width, 1);
 
         Controls.AddRange(new System.Windows.Forms.Control[] {
-            lblApiToken, lblTokenHint,
+            lblApiToken, lblConnectedBadge, lnkTokenHint,
             txtApiToken, btnShowHide, btnTestToken, lblTokenStatus,
-            lblLogDir, txtLogDir, btnBrowse,
-            chkAutoUpload, chkMinimizeToTray, chkStartWithWindows,
+            sep1, lblLogDir, txtLogDir, btnBrowse,
+            sep2, chkAutoUpload, chkMinimizeToTray, chkStartWithWindows,
             pnlFooter,
         });
 
@@ -235,6 +262,7 @@ partial class SettingsForm
     private System.Windows.Forms.Button   btnShowHide         = null!;
     private System.Windows.Forms.Button   btnTestToken        = null!;
     private System.Windows.Forms.Label    lblTokenStatus      = null!;
+    private System.Windows.Forms.Label    lblConnectedBadge   = null!;
     private System.Windows.Forms.TextBox  txtLogDir           = null!;
     private System.Windows.Forms.CheckBox chkAutoUpload       = null!;
     private System.Windows.Forms.CheckBox chkMinimizeToTray   = null!;
