@@ -52,7 +52,8 @@ public sealed class AppSettings
         }
     }
 
-    public string WowLogDirectory { get; set; } = string.Empty;
+    public string WowLogDirectory   { get; set; } = string.Empty;
+    public string ValidatedUserName { get; set; } = string.Empty;
     public bool AutoUpload { get; set; } = true;
     public bool MinimizeToTray { get; set; } = true;
     public bool StartWithWindows { get; set; } = true;

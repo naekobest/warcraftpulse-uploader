@@ -30,6 +30,7 @@ public partial class MainForm : Form
 
     private enum StatusKind { Idle, Watching, Processing, Error }
     private bool _dotBright = true;
+    private TaskCompletionSource<bool>? _duplicateTcs;
 
     public MainForm()
     {
@@ -133,20 +134,11 @@ public partial class MainForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
-        if (e.CloseReason == CloseReason.UserClosing)
+        if (e.CloseReason == CloseReason.UserClosing && _settings.MinimizeToTray)
         {
-            var result = MessageBox.Show(
-                "Minimize to tray and keep running in the background?",
-                "WarcraftPulse Uploader",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question
-            );
-            if (result == DialogResult.Yes)
-            {
-                e.Cancel = true;
-                Hide();
-                return;
-            }
+            e.Cancel = true;
+            Hide();
+            return;
         }
         _trayIcon.Visible = false;
         base.OnFormClosing(e);
@@ -156,6 +148,7 @@ public partial class MainForm : Form
     {
         _watcher?.Dispose();
         _uploader?.Dispose();
+        _uploader = null;
 
         lblLogPath.Text = string.IsNullOrEmpty(_settings.WowLogDirectory)
             ? "No log directory configured"
@@ -248,13 +241,11 @@ public partial class MainForm : Form
 
             if (_history.IsDuplicate(fileHash))
             {
-                var proceed = MessageBox.Show(
-                    "This log file was already uploaded.\n\nUpload again?",
-                    "Duplicate Log",
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question
-                );
-                if (proceed != DialogResult.Yes)
+                _duplicateTcs = new TaskCompletionSource<bool>();
+                ShowDuplicateBanner(Path.GetFileName(filePath));
+                bool proceed = await _duplicateTcs.Task;
+                HideDuplicateBanner();
+                if (!proceed)
                 {
                     SetStatus("Skipped — already uploaded.", StatusKind.Idle);
                     btnUpload.Enabled = true;
@@ -394,19 +385,23 @@ public partial class MainForm : Form
         switch (kind)
         {
             case StatusKind.Watching:
-                lblDot.ForeColor = ClrGreen;
+                lblDot.ForeColor    = ClrGreen;
+                pnlProgress.Visible = false;
                 _dotTimer.Start();
                 break;
             case StatusKind.Processing:
-                lblDot.ForeColor = ClrBlue;
+                lblDot.ForeColor    = ClrBlue;
+                pnlProgress.Visible = true;
                 _dotTimer.Stop();
                 break;
             case StatusKind.Error:
-                lblDot.ForeColor = ClrRed;
+                lblDot.ForeColor    = ClrRed;
+                pnlProgress.Visible = false;
                 _dotTimer.Stop();
                 break;
             default:
-                lblDot.ForeColor = ClrMuted;
+                lblDot.ForeColor    = ClrMuted;
+                pnlProgress.Visible = false;
                 _dotTimer.Stop();
                 break;
         }
@@ -422,8 +417,8 @@ public partial class MainForm : Form
     {
         bool show = string.IsNullOrEmpty(_settings.ApiToken);
         pnlOnboard.Visible = show;
-        lvHistory.Location = new System.Drawing.Point(0, show ? 148 : 92);
-        lvHistory.Height   = show ? 338 : 394;
+        lvHistory.Location = new System.Drawing.Point(0, show ? 162 : 106);
+        lvHistory.Height   = show ? 324 : 380;
     }
 
     private void RefreshHistory()
@@ -434,6 +429,10 @@ public partial class MainForm : Form
         lblLastUpload.Text = count > 0
             ? $"Last: {_history.Entries[^1].ZoneName} · {FormatAgo(_history.Entries[^1].UploadedAt)}"
             : "";
+
+        var last = count > 0 ? _history.Entries[^1] : null;
+        lblEncounterVal.Text = last is not null ? last.FightCount.ToString() : "—";
+        lblKillVal.Text      = last is not null ? last.KillCount.ToString()  : "—";
 
         if (count == 0)
         {
@@ -460,20 +459,90 @@ public partial class MainForm : Form
     private static string FormatAgo(DateTime utc)
     {
         var diff = DateTime.UtcNow - utc;
+        if (diff.TotalSeconds < 60) return "just now";
         if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
         if (diff.TotalHours   < 24) return $"{(int)diff.TotalHours}h ago";
         return $"{(int)diff.TotalDays}d ago";
     }
 
-    private void lvHistory_DoubleClick(object sender, EventArgs e)
+    // ── Duplicate banner ─────────────────────────────────────────────────
+
+    private System.Drawing.Point _lvLocationBeforeBanner;
+    private int                  _lvHeightBeforeBanner;
+
+    private void ShowDuplicateBanner(string fileName)
+    {
+        _lvLocationBeforeBanner  = lvHistory.Location;
+        _lvHeightBeforeBanner    = lvHistory.Height;
+        lblDuplicateText.Text    = $"Already uploaded — {fileName}\r\nUpload again anyway?";
+        pnlDuplicateBanner.BringToFront();
+        pnlDuplicateBanner.Visible = true;
+        lvHistory.Location = new System.Drawing.Point(0, lvHistory.Location.Y + 40);
+        lvHistory.Height  -= 40;
+        btnDuplicateSkip.Click   += BtnDuplicateSkip_Click;
+        btnDuplicateUpload.Click += BtnDuplicateUpload_Click;
+    }
+
+    private void HideDuplicateBanner()
+    {
+        btnDuplicateSkip.Click   -= BtnDuplicateSkip_Click;
+        btnDuplicateUpload.Click -= BtnDuplicateUpload_Click;
+        pnlDuplicateBanner.Visible = false;
+        lvHistory.Location = _lvLocationBeforeBanner;
+        lvHistory.Height   = _lvHeightBeforeBanner;
+    }
+
+    private void BtnDuplicateSkip_Click(object? sender, EventArgs e)   => _duplicateTcs?.TrySetResult(false);
+    private void BtnDuplicateUpload_Click(object? sender, EventArgs e) => _duplicateTcs?.TrySetResult(true);
+
+    // ── ListView context menu ────────────────────────────────────────────
+
+    private void lvHistory_MouseDown(object? sender, MouseEventArgs e)
+    {
+        if (e.Button != MouseButtons.Right) return;
+        var hit = lvHistory.HitTest(e.X, e.Y);
+        if (hit.Item is not null)
+            hit.Item.Selected = true;
+    }
+
+    private void lvContextMenu_Opening(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        bool hasUrl = lvHistory.SelectedItems.Count > 0 &&
+                      lvHistory.SelectedItems[0].Tag is string url &&
+                      !string.IsNullOrEmpty(url);
+        e.Cancel = !hasUrl;
+    }
+
+    private void lvMenu_OpenBrowser(object? sender, EventArgs e)
+    {
+        OpenSelectedUrl();
+    }
+
+    private void lvMenu_CopyUrl(object? sender, EventArgs e)
     {
         if (lvHistory.SelectedItems.Count == 0) return;
         if (lvHistory.SelectedItems[0].Tag is string url && !string.IsNullOrEmpty(url))
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url)
-            {
-                UseShellExecute = true,
-            });
+            Clipboard.SetText(url);
     }
+
+    private void lvMenu_CopyCode(object? sender, EventArgs e)
+    {
+        if (lvHistory.SelectedItems.Count == 0) return;
+        // Report code is stored in the entry — find it by filename
+        string fileName = lvHistory.SelectedItems[0].Text;
+        var entry = _history.Entries.FirstOrDefault(x => x.FileName == fileName);
+        if (entry is not null && !string.IsNullOrEmpty(entry.ReportCode))
+            Clipboard.SetText(entry.ReportCode);
+    }
+
+    private void OpenSelectedUrl()
+    {
+        if (lvHistory.SelectedItems.Count == 0) return;
+        if (lvHistory.SelectedItems[0].Tag is string url && !string.IsNullOrEmpty(url))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+    }
+
+    private void lvHistory_DoubleClick(object sender, EventArgs e) => OpenSelectedUrl();
 
     // ── OwnerDraw handlers ───────────────────────────────────────────────
 
