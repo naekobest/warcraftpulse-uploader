@@ -56,7 +56,7 @@ public sealed class UploadService : IDisposable
                 await Task.Delay(backoffMs[attempt], ct);
 
             // HttpRequestMessage cannot be reused after SendAsync — re-create on each attempt
-            using var request = new HttpRequestMessage(HttpMethod.Post, "api/reports/upload-parsed");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/reports/upload");
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiToken);
             var content = new ByteArrayContent(payloadBytes);
             content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
